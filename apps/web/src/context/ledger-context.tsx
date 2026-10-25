@@ -108,7 +108,41 @@ export interface LedgerContextValue {
   resetToBaseline: () => void;
   trustScore: number;
   setTrustScore: (score: number) => void;
+  statementFreshness: BankStatementFreshness;
+  refreshStatement: (daysAgo?: number, reportingPeriod?: string) => Promise<void>;
 }
+
+export interface BankStatementFreshness {
+  lastStatementUploadDate: string;
+  reportingPeriod: string;
+  daysElapsed: number;
+  thresholdDays: number;
+  isOverdue: boolean;
+  stalenessLevel: "FRESH" | "EXPIRING_SOON" | "OVERDUE" | "CRITICAL";
+  warningBadge: string;
+  statementFilename?: string;
+  statementHash?: string;
+  bankName?: string;
+  accountNumberMasked?: string;
+  uploadedBy?: string;
+  auditRule?: string;
+}
+
+export const DEFAULT_STATEMENT_FRESHNESS: BankStatementFreshness = {
+  lastStatementUploadDate: "2026-09-14T09:30:00Z",
+  reportingPeriod: "Q3 2026 (July 1 - September 14, 2026)",
+  daysElapsed: 42,
+  thresholdDays: 30,
+  isOverdue: true,
+  stalenessLevel: "OVERDUE",
+  warningBadge: "⚠️ Statement Overdue: 42 days since last upload",
+  statementFilename: "ICICI_Corporate_Escrow_Statement_Q3_2026.pdf",
+  statementHash: "0x5e89a3f2d1c087b4e91234567890abcdef1234567890abcdef1234567890abcd",
+  bankName: "ICICI Bank Ltd — FCRA & Institutional Escrow Branch",
+  accountNumberMasked: "•••• •••• •••• 9012",
+  uploadedBy: "FinOps Officer (Anand Verma, CA)",
+  auditRule: "RBI FCRA / Standard Philanthropic Audit Rule: Bank statements must be reconciled every 30 days.",
+};
 
 const STORAGE_KEY = "bhol_ledger_state_v4";
 
@@ -322,6 +356,40 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
   const [trustScore, setTrustScore] = useState<number>(
     seedData.escrowState.status === "FROZEN" ? 32 : 98
   );
+  const [statementFreshness, setStatementFreshness] = useState<BankStatementFreshness>(DEFAULT_STATEMENT_FRESHNESS);
+
+  const refreshStatement = useCallback(async (daysAgo: number = 0, reportingPeriod?: string) => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dashboard/statement-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ daysAgo, reportingPeriod }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.statementFreshness) {
+          setStatementFreshness(data.statementFreshness);
+          return;
+        }
+      }
+    } catch {
+      // Local fallback
+    }
+
+    const anchorDate = new Date("2026-10-26T01:30:00Z");
+    const newDate = new Date(anchorDate.getTime() - (daysAgo * 86400000));
+    const isOverdue = daysAgo > 30;
+    const stalenessLevel = daysAgo <= 14 ? "FRESH" : daysAgo <= 30 ? "EXPIRING_SOON" : daysAgo <= 60 ? "OVERDUE" : "CRITICAL";
+    setStatementFreshness({
+      ...DEFAULT_STATEMENT_FRESHNESS,
+      lastStatementUploadDate: newDate.toISOString(),
+      reportingPeriod: reportingPeriod || (daysAgo === 0 ? "October 2026 Statement" : DEFAULT_STATEMENT_FRESHNESS.reportingPeriod),
+      daysElapsed: daysAgo,
+      isOverdue,
+      stalenessLevel,
+      warningBadge: isOverdue ? `⚠️ Statement Overdue: ${daysAgo} days since last upload` : `✓ Statement Current: ${daysAgo}d ago`,
+    });
+  }, []);
 
   const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
 
@@ -639,6 +707,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     setTrustScore(98);
     setRecentTxs(INITIAL_TRANSACTIONS);
     setTranches(seedData.tranches as TrancheState[]);
+    setStatementFreshness(DEFAULT_STATEMENT_FRESHNESS);
 
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -665,6 +734,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     resetToBaseline,
     trustScore,
     setTrustScore,
+    statementFreshness,
+    refreshStatement,
   };
 
   return (

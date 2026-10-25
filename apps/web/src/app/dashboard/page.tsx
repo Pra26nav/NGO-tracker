@@ -715,6 +715,12 @@ export default function DashboardPage() {
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   FEATURE #3 · DONOR &amp; TRANCHE PORTAL
                 </span>
+                {ledger.statementFreshness.isOverdue && (
+                  <span className="text-[10px] font-black text-amber-300 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 animate-pulse">
+                    <span>⚠️</span>
+                    <span>Statement Overdue ({ledger.statementFreshness.daysElapsed}d)</span>
+                  </span>
+                )}
                 <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   2/3 QUORUM CONSENSUS VERIFIED
@@ -861,6 +867,27 @@ export default function DashboardPage() {
                   {campaign.isFrozen ? "ESCROW STATUS: FROZEN" : "ESCROW STATUS: ACTIVE"}
                 </span>
 
+                {/* FEATURE 3: BANK STATEMENT FRESHNESS & STALENESS WARNING BADGE */}
+                {ledger.statementFreshness.isOverdue ? (
+                  <span
+                    id="dashboard-statement-overdue-badge"
+                    className="px-3 py-1 rounded-full text-xs font-black tracking-wide flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.25)] animate-pulse"
+                    title={`Statement upload is ${ledger.statementFreshness.daysElapsed} days old (exceeds 30-day compliance threshold)`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+                    <span>⚠️ Statement Overdue: {ledger.statementFreshness.daysElapsed} days since last upload</span>
+                  </span>
+                ) : (
+                  <span
+                    id="dashboard-statement-current-badge"
+                    className="px-3 py-1 rounded-full text-xs font-bold tracking-wide flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                    title={`Bank statement verified and current (${ledger.statementFreshness.daysElapsed} days ago)`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span>✓ Statement Current: {ledger.statementFreshness.daysElapsed}d ago</span>
+                  </span>
+                )}
+
                 <span className="text-xs font-mono text-slate-400">
                   Smart Contract:{" "}
                   <span className="text-indigo-300 font-semibold">{campaign.contractAddress.slice(0, 10)}…{campaign.contractAddress.slice(-6)}</span>
@@ -984,6 +1011,172 @@ export default function DashboardPage() {
                 }`}
                 style={{ width: `${Math.max(releasedPct, 5)}%` }}
               ></div>
+            </div>
+          </div>
+        </section>
+
+        {/* ╔══════════════════════════════════════════════════╗
+            ║  FEATURE 3: BANK STATEMENT FRESHNESS & STALENESS ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <section
+          id="statement-freshness-card"
+          className={`glass rounded-2xl p-6 border transition-all duration-300 shadow-xl space-y-5 ${
+            ledger.statementFreshness.isOverdue
+              ? "border-amber-500/40 bg-amber-950/15"
+              : "border-slate-800 bg-[#0d1424]/80"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">📑</span>
+                <h3 className="text-base font-black text-white tracking-wide flex items-center gap-2">
+                  <span>Bank Statement Freshness &amp; Staleness Sentinel</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
+                    Feature #3
+                  </span>
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400">
+                Automated continuous reconciliation monitoring: Bank statements must be verified every 30 days under standard philanthropic governance.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {ledger.statementFreshness.isOverdue ? (
+                <div
+                  id="statement-staleness-warning-pill"
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-black flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.25)] animate-pulse"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span>⚠️ Statement Overdue: {ledger.statementFreshness.daysElapsed} days since last upload</span>
+                </div>
+              ) : (
+                <div
+                  id="statement-current-pill"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>✓ Reconciled &amp; Current ({ledger.statementFreshness.daysElapsed}d ago)</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Overdue Warning Callout */}
+          {ledger.statementFreshness.isOverdue && (
+            <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-2">
+              <div className="font-bold flex items-center gap-2 text-sm text-amber-300">
+                <span>⚠️</span>
+                <span>Audit Warning: Statement Staleness Exceeds 30-Day Window</span>
+              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                The last audited bank statement was uploaded on{" "}
+                <strong className="text-amber-200 font-mono">
+                  {new Date(ledger.statementFreshness.lastStatementUploadDate).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </strong>{" "}
+                (<strong className="text-amber-200 font-mono">{ledger.statementFreshness.daysElapsed} days ago</strong>), covering{" "}
+                <strong className="text-amber-200 font-mono">{ledger.statementFreshness.reportingPeriod}</strong>. Because this exceeds the 30-day compliance threshold by {ledger.statementFreshness.daysElapsed - 30} days, an automated reporting discrepancy flag has been raised on the public audit stream.
+              </p>
+            </div>
+          )}
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+              <div className="text-[10px] text-slate-500 font-mono uppercase">Last Upload Date</div>
+              <div className="font-bold text-slate-200 font-mono">
+                {new Date(ledger.statementFreshness.lastStatementUploadDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">{ledger.statementFreshness.daysElapsed} days elapsed</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+              <div className="text-[10px] text-slate-500 font-mono uppercase">Reporting Period</div>
+              <div className="font-bold text-indigo-300 truncate" title={ledger.statementFreshness.reportingPeriod}>
+                {ledger.statementFreshness.reportingPeriod}
+              </div>
+              <div className="text-[10px] text-slate-400">Quarterly Reconciliation</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+              <div className="text-[10px] text-slate-500 font-mono uppercase">Freshness Window</div>
+              <div className="flex items-center justify-between font-mono font-bold">
+                <span className={ledger.statementFreshness.isOverdue ? "text-amber-400" : "text-emerald-400"}>
+                  {ledger.statementFreshness.daysElapsed} / {ledger.statementFreshness.thresholdDays} Days
+                </span>
+                <span className="text-[10px] text-slate-500">Max 30d</span>
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    ledger.statementFreshness.isOverdue ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
+                  style={{ width: `${Math.min(100, (ledger.statementFreshness.daysElapsed / ledger.statementFreshness.thresholdDays) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+              <div className="text-[10px] text-slate-500 font-mono uppercase">Audited Banking Institution</div>
+              <div className="font-bold text-slate-200 truncate" title={ledger.statementFreshness.bankName}>
+                {ledger.statementFreshness.bankName || "ICICI Bank Ltd (FCRA Escrow)"}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Acct: {ledger.statementFreshness.accountNumberMasked || "•••• 9012"}
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Demo Simulation Controls */}
+          <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800/90 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <span className="font-bold text-slate-200 flex items-center gap-1.5 font-mono text-[11px] uppercase">
+                <span>🎮</span> Interactive Judge Simulation Controls
+              </span>
+              <p className="text-[11px] text-slate-400">
+                Toggle between fresh and overdue states to test dynamic badge reaction and audit recalculation:
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                id="simulate-upload-fresh-btn"
+                onClick={() => ledger.refreshStatement(0, "October 2026 Statement")}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>📤</span>
+                <span>Simulate Fresh Upload (0d)</span>
+              </button>
+
+              <button
+                type="button"
+                id="simulate-upload-overdue-btn"
+                onClick={() => ledger.refreshStatement(42, "Q3 2026 (July 1 - September 14, 2026)")}
+                className="px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>⚠️</span>
+                <span>Simulate Overdue (42d)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => copyToClipboard(ledger.statementFreshness.statementHash || "0x5e89a3f2d1c087b4e91234567890abcdef1234567890abcdef1234567890abcd")}
+                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono transition flex items-center gap-1"
+                title="Copy Statement SHA-256 Hash"
+              >
+                <span>📋</span>
+                <span>{copiedText === (ledger.statementFreshness.statementHash || "0x5e89a3f2d1c087b4e91234567890abcdef1234567890abcdef1234567890abcd") ? "Copied Hash!" : "Copy PDF Hash"}</span>
+              </button>
             </div>
           </div>
         </section>

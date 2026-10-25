@@ -91,13 +91,21 @@ DISCREPANCY_RULES = [
         "title": "Uncorroborated Off-Chain Settlement Claim",
         "description": "NGO quarterly progress report claims an expense that lacks matching bank UTR reference or blockchain off-ramp evidence.",
         "enforcement": "AUDIT_FLAG"
+    },
+    {
+        "ruleId": "RULE-REP-002",
+        "domain": "REPORTING",
+        "severity": "WARNING_REVIEW",
+        "title": "Bank Statement Staleness Exceeds 30-Day Threshold",
+        "description": "Bank statement upload is stale; statement age exceeds 30-day compliance window under standard philanthropic governance.",
+        "enforcement": "AUDIT_FLAG"
     }
 ]
 
 def evaluate_all_rules(scenario: str = "BASELINE") -> List[Dict[str, Any]]:
     """Evaluates rules against the current campaign state."""
     results = []
-    
+
     if scenario == "CROSS_DONOR_DOUBLE_SPEND":
         results.append({
             "ruleId": "RULE-CRYPTO-001",
@@ -143,6 +151,24 @@ def evaluate_all_rules(scenario: str = "BASELINE") -> List[Dict[str, Any]]:
             "actionTaken": "AUTONOMOUS_FREEZE",
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
         })
+
+    elif scenario == "STATEMENT_OVERDUE":
+        try:
+            from escrow_dashboard import calculate_statement_freshness
+            freshness = calculate_statement_freshness()
+            if freshness.get("isOverdue"):
+                results.append({
+                    "ruleId": "RULE-REP-002",
+                    "domain": "REPORTING",
+                    "severity": "WARNING_REVIEW",
+                    "title": f"Bank Statement Overdue ({freshness['daysElapsed']} Days Elapsed)",
+                    "description": f"Bank statement upload is stale; {freshness['daysElapsed']} days elapsed since last upload (threshold: 30 days). Reporting period: {freshness['reportingPeriod']}.",
+                    "warningBadge": freshness["warningBadge"],
+                    "actionTaken": "AUDIT_FLAG",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+                })
+        except Exception:
+            pass
 
     return results
 

@@ -1,5 +1,8 @@
-node_modules/ 
-.next/ 
-dist/ 
-venv/ 
-__pycache__/ 
+node_modules/
+.next/
+**/.next/
+dist/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc

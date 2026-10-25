@@ -8,6 +8,7 @@ import hashlib
 import time
 import os
 import json
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Form
 from pydantic import BaseModel
@@ -53,6 +54,67 @@ CAMPAIGN_STATE = {
     "network": SEED_DATA.get("campaign", {}).get("network", "Ethereum Sepolia / Mainnet"),
     "lastTxHash": SEED_DATA.get("campaign", {}).get("lastTxHash", "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7"),
 }
+
+# ────────────────────────────────────────────────────────────
+# Feature 3: Bank Statement Freshness & Staleness Tracking
+# ────────────────────────────────────────────────────────────
+STATEMENT_STATE: Dict[str, Any] = {
+    # 42 days elapsed from September 14, 2026 to October 26, 2026 baseline
+    "lastStatementUploadDate": "2026-09-14T09:30:00Z",
+    "reportingPeriod": "Q3 2026 (July 1 - September 14, 2026)",
+    "statementFilename": "ICICI_Corporate_Escrow_Statement_Q3_2026.pdf",
+    "statementHash": "0x5e89a3f2d1c087b4e91234567890abcdef1234567890abcdef1234567890abcd",
+    "bankName": "ICICI Bank Ltd — FCRA & Institutional Escrow Branch",
+    "accountNumberMasked": "•••• •••• •••• 9012",
+    "thresholdDays": 30,
+    "uploadedBy": "FinOps Officer (Anand Verma, CA)",
+    "auditRule": "RBI FCRA / Standard Philanthropic Audit Rule: Bank statements must be reconciled every 30 days."
+}
+
+def get_effective_reference_datetime() -> datetime:
+    return datetime(2026, 10, 26, 1, 30, 0, tzinfo=timezone.utc)
+
+def calculate_statement_freshness() -> Dict[str, Any]:
+    upload_str = STATEMENT_STATE["lastStatementUploadDate"]
+    try:
+        clean_str = upload_str.replace("Z", "+00:00")
+        upload_dt = datetime.fromisoformat(clean_str)
+    except Exception:
+        upload_dt = datetime(2026, 9, 14, 9, 30, 0, tzinfo=timezone.utc)
+    
+    ref_dt = get_effective_reference_datetime()
+    days_elapsed = max(0, (ref_dt.date() - upload_dt.date()).days)
+    
+    threshold = int(STATEMENT_STATE.get("thresholdDays", 30))
+    is_overdue = days_elapsed > threshold
+    
+    if days_elapsed <= 14:
+        staleness_level = "FRESH"
+    elif days_elapsed <= threshold:
+        staleness_level = "EXPIRING_SOON"
+    elif days_elapsed <= 60:
+        staleness_level = "OVERDUE"
+    else:
+        staleness_level = "CRITICAL"
+        
+    warning_badge = f"⚠️ Statement Overdue: {days_elapsed} days since last upload" if is_overdue else f"✓ Statement Current: {days_elapsed}d ago"
+
+    return {
+        "lastStatementUploadDate": upload_str,
+        "reportingPeriod": STATEMENT_STATE["reportingPeriod"],
+        "daysElapsed": days_elapsed,
+        "thresholdDays": threshold,
+        "isOverdue": is_overdue,
+        "stalenessLevel": staleness_level,
+        "warningBadge": warning_badge,
+        "statementFilename": STATEMENT_STATE.get("statementFilename"),
+        "statementHash": STATEMENT_STATE.get("statementHash"),
+        "bankName": STATEMENT_STATE.get("bankName"),
+        "accountNumberMasked": STATEMENT_STATE.get("accountNumberMasked"),
+        "uploadedBy": STATEMENT_STATE.get("uploadedBy"),
+        "auditRule": STATEMENT_STATE.get("auditRule"),
+    }
+
 
 TRANCHES = []
 for t in SEED_DATA.get("tranches", []):
@@ -195,6 +257,7 @@ def get_dashboard_state():
         "campaign": CAMPAIGN_STATE,
         "tranches": TRANCHES,
         "activityFeed": ACTIVITY_FEED,
+        "statementFreshness": calculate_statement_freshness(),
         "summary": {
             "lockedBalanceEth": CAMPAIGN_STATE["totalDepositedEth"] - CAMPAIGN_STATE["totalReleasedEth"],
             "releasedBalanceEth": CAMPAIGN_STATE["totalReleasedEth"],
@@ -388,3 +451,56 @@ def get_activity_feed():
         "count": len(ACTIVITY_FEED),
         "activities": ACTIVITY_FEED
     }
+
+# ────────────────────────────────────────────────────────────
+# Statement Freshness Audit Endpoints (Feature 3)
+# ────────────────────────────────────────────────────────────
+@router.get("/statement-freshness")
+def get_statement_freshness():
+    """Returns bank statement freshness, upload date, days elapsed, and staleness warning."""
+    return calculate_statement_freshness()
+
+class StatementUploadRequest(BaseModel):
+    reportingPeriod: Optional[str] = "Q4 2026 (Oct 1 - Oct 25, 2026)"
+    filename: Optional[str] = "ICICI_Bank_Reconciliation_Statement_Oct2026.pdf"
+    daysAgo: Optional[int] = 0
+    uploadedBy: Optional[str] = "FinOps Officer (Anand Verma, CA)"
+
+@router.post("/statement-upload")
+def upload_statement(req: StatementUploadRequest):
+    """
+    Simulates uploading a refreshed bank statement or resetting to an overdue state for testing.
+    """
+    ref_dt = get_effective_reference_datetime()
+    new_dt = ref_dt - timedelta(days=req.daysAgo if req.daysAgo is not None else 0)
+    STATEMENT_STATE["lastStatementUploadDate"] = new_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if req.reportingPeriod:
+        STATEMENT_STATE["reportingPeriod"] = req.reportingPeriod
+    if req.filename:
+        STATEMENT_STATE["statementFilename"] = req.filename
+    if req.uploadedBy:
+        STATEMENT_STATE["uploadedBy"] = req.uploadedBy
+    STATEMENT_STATE["statementHash"] = "0x" + hashlib.sha256(f"{new_dt.isoformat()}:{req.filename}".encode()).hexdigest()
+
+    freshness = calculate_statement_freshness()
+
+    new_act = {
+        "id": f"ACT-{len(ACTIVITY_FEED) + 1001}",
+        "type": "ORACLE_HEARTBEAT",
+        "title": "Bank Statement Uploaded & Processed" if not freshness["isOverdue"] else "Bank Statement Reverted to Overdue",
+        "subtitle": f"{STATEMENT_STATE['statementFilename']} — {STATEMENT_STATE['reportingPeriod']}",
+        "amount": f"{freshness['daysElapsed']}d Elapsed",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "blockNumber": 20491950 + len(ACTIVITY_FEED),
+        "txHash": STATEMENT_STATE["statementHash"],
+        "badge": "AUDIT PASS" if not freshness["isOverdue"] else "AUDIT OVERDUE",
+        "color": "emerald" if not freshness["isOverdue"] else "amber",
+        "details": f"Statement verified: {freshness['warningBadge']}. Reporting Period: {freshness['reportingPeriod']}."
+    }
+    ACTIVITY_FEED.insert(0, new_act)
+
+    return {
+        "status": "SUCCESS",
+        "statementFreshness": freshness
+    }
+

@@ -423,3 +423,25 @@ export interface DonationRecord {
   estimatedValue?: number | null;
   inventory?: InventoryTracking | null;
 }
+
+/* ────────────────────────────────────────────────────────────
+   Feature 3: Bank Statement Freshness & Staleness Warnings
+──────────────────────────────────────────────────────────── */
+export type StatementStalenessLevel = "FRESH" | "EXPIRING_SOON" | "OVERDUE" | "CRITICAL";
+
+export interface BankStatementFreshness {
+  lastStatementUploadDate: string;
+  reportingPeriod: string;
+  daysElapsed: number;
+  thresholdDays: number;
+  isOverdue: boolean;
+  stalenessLevel: StatementStalenessLevel;
+  warningBadge: string;
+  statementFilename?: string;
+  statementHash?: string;
+  bankName?: string;
+  accountNumberMasked?: string;
+  uploadedBy?: string;
+  auditRule?: string;
+}
+
