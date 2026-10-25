@@ -21,16 +21,29 @@ export interface LedgerTransaction {
   amountEth: number;
   amountUsd: number;
   amountInr: number;
-  rail: "CRYPTO" | "UPI";
+  rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
   token: string;
   purpose: string;
   txHash: string;
-  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN";
+  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE";
   timestamp: string;
   block: number;
   utrNumber?: string | null;
   donorTaxId?: string | null;
   taxReceiptId?: string | null;
+  // Feature 1: Non-Cash In-Kind & Inventory Tracking
+  contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+  itemName?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  estimatedValue?: number | null;
+  inventory?: {
+    pledged: number;
+    received: number;
+    distributed: number;
+    damaged: number;
+    remaining: number;
+  } | null;
 }
 
 export interface TrancheState {
@@ -66,12 +79,24 @@ export interface LedgerContextValue {
     donorIdentifier?: string;
     donorName?: string;
     amount: number;
-    rail: "CRYPTO" | "UPI";
+    rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
     token: string;
     purposeName?: string;
     utrNumber?: string | null;
     donorEmail?: string;
     donorTaxId?: string;
+    contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+    itemName?: string;
+    quantity?: number;
+    unit?: string;
+    estimatedValue?: number;
+    inventory?: {
+      pledged: number;
+      received: number;
+      distributed: number;
+      damaged: number;
+      remaining: number;
+    };
   }) => LedgerTransaction;
   releaseTranche: (
     trancheId: number,
@@ -192,6 +217,64 @@ const INITIAL_TRANSACTIONS: LedgerTransaction[] = [
     timestamp: "2026-10-25 13:00:00 UTC",
     block: 20491880,
     taxReceiptId: "80G-2026-406006",
+  },
+  {
+    id: "DON-904",
+    donor: "Rotary Global Health",
+    donorFull: "rotary.international.relief@rotary.org",
+    amount: "150 kits",
+    amountEth: 5.86,
+    amountUsd: 18750.0,
+    amountInr: 1577812.0,
+    rail: "IN_KIND_LOGISTICS",
+    token: "KIT",
+    purpose: "Emergency Rural Medical Clinics",
+    txHash: "0x7a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3",
+    status: "RECEIVED_IN_WAREHOUSE",
+    timestamp: "2026-10-25 09:15:00 UTC",
+    block: 20491845,
+    taxReceiptId: "80G-2026-904001",
+    contributionType: "MEDICAL",
+    itemName: "Emergency Surgical & First-Aid Triage Kits",
+    quantity: 150,
+    unit: "kits",
+    estimatedValue: 18750.0,
+    inventory: {
+      pledged: 150,
+      received: 150,
+      distributed: 120,
+      damaged: 4,
+      remaining: 26,
+    },
+  },
+  {
+    id: "DON-905",
+    donor: "Kirloskar Clean Tech",
+    donorFull: "csr.donations@kirloskar-water.com",
+    amount: "40 units",
+    amountEth: 7.5,
+    amountUsd: 24000.0,
+    amountInr: 2019600.0,
+    rail: "IN_KIND_LOGISTICS",
+    token: "UNIT",
+    purpose: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    txHash: "0x5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b",
+    status: "RECEIVED_IN_WAREHOUSE",
+    timestamp: "2026-10-25 10:20:00 UTC",
+    block: 20491852,
+    taxReceiptId: "80G-2026-905002",
+    contributionType: "GOODS",
+    itemName: "Solar Submersible Borewell Pumps (5HP)",
+    quantity: 40,
+    unit: "units",
+    estimatedValue: 24000.0,
+    inventory: {
+      pledged: 40,
+      received: 40,
+      distributed: 32,
+      damaged: 1,
+      remaining: 7,
+    },
   },
   {
     id: "DON-901",
@@ -323,22 +406,43 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
       donorIdentifier?: string;
       donorName?: string;
       amount: number;
-      rail: "CRYPTO" | "UPI";
+      rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
       token: string;
       purposeName?: string;
       utrNumber?: string | null;
       donorEmail?: string;
       donorTaxId?: string;
+      contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+      itemName?: string;
+      quantity?: number;
+      unit?: string;
+      estimatedValue?: number;
+      inventory?: {
+        pledged: number;
+        received: number;
+        distributed: number;
+        damaged: number;
+        remaining: number;
+      };
     }): LedgerTransaction => {
       const ethRate = seedData.financials.exchangeRates.ethUsd; // $3,200
       const inrRate = seedData.financials.exchangeRates.usdInr; // ₹84.15
+
+      const isNonCash = params.contributionType && ["GOODS", "FOOD", "MEDICAL", "OTHER"].includes(params.contributionType);
 
       let amountEth = 0;
       let amountUsd = 0;
       let amountInr = 0;
       let displayAmount = "";
 
-      if (params.rail === "CRYPTO") {
+      if (isNonCash) {
+        const qty = params.quantity || params.amount || 1;
+        const unitLabel = params.unit || "units";
+        displayAmount = `${qty} ${unitLabel}`;
+        amountUsd = params.estimatedValue || (qty * 75);
+        amountInr = amountUsd * inrRate;
+        amountEth = amountUsd / ethRate;
+      } else if (params.rail === "CRYPTO") {
         if (params.token === "ETH") {
           amountEth = params.amount;
           amountUsd = params.amount * ethRate;
@@ -370,6 +474,14 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         params.donorName ||
         "0x71C9...b901";
 
+      const finalInventory = params.inventory || (isNonCash ? {
+        pledged: params.quantity || params.amount,
+        received: params.quantity || params.amount,
+        distributed: 0,
+        damaged: 0,
+        remaining: params.quantity || params.amount,
+      } : null);
+
       const newTx: LedgerTransaction = {
         id: newId,
         donor: donorLabel.includes("@")
@@ -380,47 +492,56 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         amountEth: Number(amountEth.toFixed(4)),
         amountUsd: Number(amountUsd.toFixed(2)),
         amountInr: Number(amountInr.toFixed(2)),
-        rail: params.rail,
-        token: params.token,
+        rail: isNonCash ? "IN_KIND_LOGISTICS" : params.rail,
+        token: isNonCash ? (params.unit || "ITEM").toUpperCase() : params.token,
         purpose: params.purposeName || seedData.campaign.name,
         txHash: newTxHash,
-        status: "LOCKED_IN_ESCROW",
+        status: isNonCash ? "RECEIVED_IN_WAREHOUSE" : "LOCKED_IN_ESCROW",
         timestamp: "Just now (Synced)",
         block: 20491892 + Math.floor(Math.random() * 5),
         utrNumber: params.utrNumber || null,
         donorTaxId: params.donorTaxId || null,
         taxReceiptId: `80G-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+        contributionType: params.contributionType || "MONEY",
+        itemName: params.itemName || null,
+        quantity: params.quantity || (isNonCash ? params.amount : null),
+        unit: params.unit || null,
+        estimatedValue: params.estimatedValue || (isNonCash ? amountUsd : null),
+        inventory: finalInventory,
       };
 
-      // State updates: Total Donated = User Input Amount rather than the initial mock seed
-      const finalEth = Number(amountEth.toFixed(4));
-      setTotalDonated(finalEth);
-      setVaultBalance(finalEth);
-      setReleasedAmount(0.0);
+      // State updates:
+      // If Cash donation, scale liquid vault and milestone tranches
+      // If Non-Cash in-kind donation, record in live transaction feed and warehouse ledger without diluting liquid cash escrow
+      if (!isNonCash) {
+        const finalEth = Number(amountEth.toFixed(4));
+        setTotalDonated(finalEth);
+        setVaultBalance(finalEth);
+        setReleasedAmount(0.0);
+
+        const t_splits = [0.20, 0.30, 0.30, 0.20];
+        const scaledTranches: TrancheState[] = seedData.tranches.map((t, idx) => {
+          const pct = t_splits[idx] ?? 0.25;
+          const tEth = Number((finalEth * pct).toFixed(4));
+          const tUsd = Number((tEth * ethRate).toFixed(2));
+          const tInr = Number((tUsd * inrRate).toFixed(2));
+          return {
+            ...t,
+            percentage: Math.round(pct * 100),
+            amountEth: tEth,
+            amountUsd: tUsd,
+            amountInr: tInr,
+            status: (idx === 0 ? "PENDING_VERIFICATION" : "LOCKED") as TrancheState["status"],
+            badge: idx === 0 ? "CURRENT EARMARK" : "LOCKED",
+            releasedAt: null,
+            verifiedNullifier: null,
+            releaseTxHash: null,
+          };
+        });
+        setTranches(scaledTranches);
+      }
+
       setRecentTxs((prev) => [newTx, ...prev]);
-
-      // Dynamically scale the 4 tranches (20% / 30% / 30% / 20%) to match the user donation amount
-      const t_splits = [0.20, 0.30, 0.30, 0.20];
-      const scaledTranches: TrancheState[] = seedData.tranches.map((t, idx) => {
-        const pct = t_splits[idx] ?? 0.25;
-        const tEth = Number((finalEth * pct).toFixed(4));
-        const tUsd = Number((tEth * ethRate).toFixed(2));
-        const tInr = Number((tUsd * inrRate).toFixed(2));
-        return {
-          ...t,
-          percentage: Math.round(pct * 100),
-          amountEth: tEth,
-          amountUsd: tUsd,
-          amountInr: tInr,
-          status: (idx === 0 ? "PENDING_VERIFICATION" : "LOCKED") as TrancheState["status"],
-          badge: idx === 0 ? "CURRENT EARMARK" : "LOCKED",
-          releasedAt: null,
-          verifiedNullifier: null,
-          releaseTxHash: null,
-        };
-      });
-      setTranches(scaledTranches);
-
       return newTx;
     },
     []

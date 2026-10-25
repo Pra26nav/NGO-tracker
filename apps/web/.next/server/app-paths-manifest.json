@@ -1,8 +1,9 @@
 {
-  "/red-team/page": "app/red-team/page.js",
   "/flow-tracer/page": "app/flow-tracer/page.js",
+  "/donate/page": "app/donate/page.js",
   "/page": "app/page.js",
   "/reconciliation/page": "app/reconciliation/page.js",
-  "/donate/page": "app/donate/page.js",
+  "/red-team/page": "app/red-team/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/pitch/page": "app/pitch/page.js"
 }

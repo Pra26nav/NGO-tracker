@@ -37,11 +37,21 @@ import {
   Smartphone,
   Zap,
   CheckCircle,
+  Package,
+  Boxes,
+  HeartPulse,
+  Stethoscope,
+  Utensils,
+  Truck,
+  Warehouse,
+  Tag,
+  ClipboardList,
 } from "lucide-react";
 
 /* ────────────────────────────────────────────────────────────
    Types & Models
 ──────────────────────────────────────────────────────────── */
+export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
 type FiatCurrency = "INR" | "USD" | "EUR" | "GBP";
 type CryptoToken = "ETH" | "USDC";
 type FiatPaymentMethod = "UPI" | "CARD" | "BANK";
@@ -134,7 +144,159 @@ interface RecentDonation {
   status: string;
   timestamp: string;
   utrNumber?: string | null;
+  contributionType?: ContributionType;
+  itemName?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  estimatedValue?: number | null;
+  inventory?: {
+    pledged: number;
+    received: number;
+    distributed: number;
+    damaged: number;
+    remaining: number;
+  } | null;
 }
+
+interface NonCashPreset {
+  type: "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+  name: string;
+  defaultQty: number;
+  unit: string;
+  defaultEstVal: number;
+  description: string;
+}
+
+const NON_CASH_PRESETS: Record<"GOODS" | "FOOD" | "MEDICAL" | "OTHER", NonCashPreset[]> = {
+  GOODS: [
+    {
+      type: "GOODS",
+      name: "Solar Submersible Borewell Pump (5HP)",
+      defaultQty: 25,
+      unit: "units",
+      defaultEstVal: 15000,
+      description: "Direct hydro-extraction solar pumps for Maharashtra cluster",
+    },
+    {
+      type: "GOODS",
+      name: "HDPE Deep-Bore Casing Pipe (200m Coils)",
+      defaultQty: 50,
+      unit: "coils",
+      defaultEstVal: 6200,
+      description: "High-pressure certified casing pipes for deep borewells",
+    },
+    {
+      type: "GOODS",
+      name: "Potable Water Tank (5,000L Storage)",
+      defaultQty: 10,
+      unit: "tanks",
+      defaultEstVal: 8500,
+      description: "Heavy-duty UV-stabilized community water reservoirs",
+    },
+    {
+      type: "GOODS",
+      name: "Multi-Stage Reverse Osmosis Membrane",
+      defaultQty: 100,
+      unit: "units",
+      defaultEstVal: 4800,
+      description: "Water filtration membranes removing arsenic and heavy fluoride",
+    },
+  ],
+  FOOD: [
+    {
+      type: "FOOD",
+      name: "Fortified Nutrition Grain Sacks (50kg)",
+      defaultQty: 200,
+      unit: "sacks",
+      defaultEstVal: 5000,
+      description: "WHO-grade vitamin-enriched wheat & pulses rations",
+    },
+    {
+      type: "FOOD",
+      name: "Emergency Potable Water Jerrycans (20L)",
+      defaultQty: 500,
+      unit: "cans",
+      defaultEstVal: 2500,
+      description: "Sterile sealed drinking water cans for crisis zones",
+    },
+    {
+      type: "FOOD",
+      name: "High-Calorie Ready-to-Use Rations (Cases)",
+      defaultQty: 1000,
+      unit: "packs",
+      defaultEstVal: 3800,
+      description: "Disaster relief therapeutic food packets",
+    },
+    {
+      type: "FOOD",
+      name: "Infant Micronutrient Formula (Cases)",
+      defaultQty: 80,
+      unit: "cases",
+      defaultEstVal: 4200,
+      description: "Pediatric clinical nutritional formula",
+    },
+  ],
+  MEDICAL: [
+    {
+      type: "MEDICAL",
+      name: "Emergency First-Aid & Surgical Triage Kits",
+      defaultQty: 150,
+      unit: "kits",
+      defaultEstVal: 18750,
+      description: "Sterile scalpel sets, suture packs, and field tourniquets",
+    },
+    {
+      type: "MEDICAL",
+      name: "Field Telemedicine Diagnostic Station",
+      defaultQty: 5,
+      unit: "units",
+      defaultEstVal: 12500,
+      description: "Solar-powered satellite telemedicine consultation tablet kits",
+    },
+    {
+      type: "MEDICAL",
+      name: "Broad-Spectrum Antibiotics (Pack 500)",
+      defaultQty: 60,
+      unit: "packs",
+      defaultEstVal: 3600,
+      description: "Essential antibacterial pharmaceuticals for field clinics",
+    },
+    {
+      type: "MEDICAL",
+      name: "Waterborne Pathogen Diagnostics RDTs",
+      defaultQty: 400,
+      unit: "tests",
+      defaultEstVal: 3200,
+      description: "Rapid antigen tests for cholera, typhoid, and fluorosis",
+    },
+  ],
+  OTHER: [
+    {
+      type: "OTHER",
+      name: "Off-Grid Deep-Cycle Solar Battery (200Ah)",
+      defaultQty: 20,
+      unit: "units",
+      defaultEstVal: 6000,
+      description: "Long-life LiFePO4 batteries for remote medical clinics",
+    },
+    {
+      type: "OTHER",
+      name: "Emergency VHF Field Communication Radios",
+      defaultQty: 30,
+      unit: "radios",
+      defaultEstVal: 4500,
+      description: "Direct disaster coordination transceivers",
+    },
+    {
+      type: "OTHER",
+      name: "Hydrogeological Borewell Drill Bits (Heavy)",
+      defaultQty: 4,
+      unit: "bits",
+      defaultEstVal: 7800,
+      description: "Tungsten carbide drilling bits for hard basalt rock aquifers",
+    },
+  ],
+};
 
 const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
   {
@@ -144,10 +306,35 @@ const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
     amountUsd: "$160,000",
     rail: "CRYPTO",
     token: "ETH",
+    contributionType: "MONEY",
     purpose: "Rural Water Infrastructure Fund",
     txHash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
     status: "LOCKED_IN_ESCROW",
     timestamp: "10 mins ago",
+  },
+  {
+    id: "DON-904",
+    donor: "Rotary Global Health",
+    amount: "150 kits",
+    amountUsd: "$18,750",
+    rail: "IN_KIND_LOGISTICS",
+    token: "KIT",
+    contributionType: "MEDICAL",
+    itemName: "Emergency Surgical & First-Aid Triage Kits",
+    quantity: 150,
+    unit: "kits",
+    estimatedValue: 18750,
+    inventory: {
+      pledged: 150,
+      received: 150,
+      distributed: 120,
+      damaged: 4,
+      remaining: 26,
+    },
+    purpose: "Emergency Rural Medical Clinics",
+    txHash: "0x7a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3",
+    status: "RECEIVED_IN_WAREHOUSE",
+    timestamp: "20 mins ago",
   },
   {
     id: "DON-902",
@@ -156,11 +343,36 @@ const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
     amountUsd: "$297.08",
     rail: "FIAT",
     token: "INR",
+    contributionType: "MONEY",
     purpose: "Rural Water Infrastructure Fund",
     txHash: "0x44b912aaccdd00112233445566778899aabbccddeeff00112233445566778899",
     status: "LOCKED_IN_ESCROW",
     timestamp: "24 mins ago",
     utrNumber: "UTR-2026-881290",
+  },
+  {
+    id: "DON-905",
+    donor: "Kirloskar Clean Tech",
+    amount: "40 units",
+    amountUsd: "$24,000",
+    rail: "IN_KIND_LOGISTICS",
+    token: "UNIT",
+    contributionType: "GOODS",
+    itemName: "Solar Submersible Borewell Pumps (5HP)",
+    quantity: 40,
+    unit: "units",
+    estimatedValue: 24000,
+    inventory: {
+      pledged: 40,
+      received: 40,
+      distributed: 32,
+      damaged: 1,
+      remaining: 7,
+    },
+    purpose: "Rural Water Infrastructure Fund",
+    txHash: "0x5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b",
+    status: "RECEIVED_IN_WAREHOUSE",
+    timestamp: "45 mins ago",
   },
   {
     id: "DON-903",
@@ -169,18 +381,20 @@ const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
     amountUsd: "$250.00",
     rail: "FIAT",
     token: "USD",
+    contributionType: "MONEY",
     purpose: "Rural Water Infrastructure Fund",
     txHash: "0x9c1029384756ab1029384756ab1029384756ab1029384756ab1029384756ab10",
     status: "LOCKED_IN_ESCROW",
     timestamp: "1 hour ago",
   },
   {
-    id: "DON-904",
+    id: "DON-906",
     donor: "0x4E21...a391",
     amount: "2,500 USDC",
     amountUsd: "$2,500.00",
     rail: "CRYPTO",
     token: "USDC",
+    contributionType: "MONEY",
     purpose: "Rural Water Infrastructure Fund",
     txHash: "0x3344556677889900112233445566778899001122334455667788990011223344",
     status: "LOCKED_IN_ESCROW",
@@ -192,8 +406,8 @@ const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
    Main Component
 ──────────────────────────────────────────────────────────── */
 export default function DonatePage() {
-  // Navigation Tabs: Fiat vs. Crypto
-  const [activeRail, setActiveRail] = useState<"FIAT" | "CRYPTO">("FIAT");
+  // Navigation Tabs: Fiat vs. Crypto vs. Non-Cash (Goods, Food, Medical, Other)
+  const [activeRail, setActiveRail] = useState<"FIAT" | "CRYPTO" | "NON_CASH">("FIAT");
 
   // Tab 1: Fiat State
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>("INR");
@@ -202,6 +416,16 @@ export default function DonatePage() {
   const [donorName, setDonorName] = useState<string>("Ananya Sharma");
   const [donorEmail, setDonorEmail] = useState<string>("ananya.sharma@outlook.com");
   const [donorTaxId, setDonorTaxId] = useState<string>("ABCDE1234F");
+
+  // Tab 3: Non-Cash In-Kind Supplies State (Feature 1)
+  const [nonCashType, setNonCashType] = useState<"GOODS" | "FOOD" | "MEDICAL" | "OTHER">("GOODS");
+  const [nonCashItemName, setNonCashItemName] = useState<string>("Solar Submersible Borewell Pump (5HP)");
+  const [nonCashQuantity, setNonCashQuantity] = useState<number>(25);
+  const [nonCashUnit, setNonCashUnit] = useState<string>("units");
+  const [nonCashEstimatedValue, setNonCashEstimatedValue] = useState<number>(15000);
+  const [nonCashCurrency, setNonCashCurrency] = useState<"USD" | "INR">("USD");
+  const [deliveryHub, setDeliveryHub] = useState<string>("Maharashtra Central Logistics Hub #4 — Wardha Cluster");
+  const [expandedInventoryId, setExpandedInventoryId] = useState<string | null>(null);
 
   // Web3 & Wagmi Context
   const web3 = useWeb3();
@@ -282,10 +506,11 @@ export default function DonatePage() {
     setIsSubmitting(true);
 
     const isCrypto = activeRail === "CRYPTO";
-    const depositAmount = isCrypto ? cryptoAmount : fiatAmount;
-    const tokenSymbol = isCrypto ? cryptoToken : selectedCurrency;
-    const donorId = isCrypto ? connectedAddress : donorName;
-    const utrGen = !isCrypto ? `UTR-2026-${Math.floor(100000 + Math.random() * 900000)}` : null;
+    const isNonCash = activeRail === "NON_CASH";
+    const depositAmount = isNonCash ? nonCashQuantity : isCrypto ? cryptoAmount : fiatAmount;
+    const tokenSymbol = isNonCash ? nonCashUnit.toUpperCase() : isCrypto ? cryptoToken : selectedCurrency;
+    const donorId = isCrypto && web3.isConnected ? connectedAddress : donorName;
+    const utrGen = !isCrypto && !isNonCash ? `UTR-2026-${Math.floor(100000 + Math.random() * 900000)}` : null;
 
     // Simulate Off-Chain IPFS CID Hash for heavy receipts/audit manifest
     const randomHex = Math.random().toString(16).substring(2, 10);
@@ -354,15 +579,27 @@ export default function DonatePage() {
 
       // Record into global shared state store
       const recordedTx = addDonation({
-        donorIdentifier: isCrypto ? connectedAddress : donorName,
+        donorIdentifier: isCrypto && web3.isConnected ? connectedAddress : donorName,
         donorName: donorName,
         amount: depositAmount,
-        rail: isCrypto ? "CRYPTO" : "UPI",
+        rail: isNonCash ? "IN_KIND_LOGISTICS" : isCrypto ? "CRYPTO" : "UPI",
         token: tokenSymbol,
         purposeName: ACTIVE_CAMPAIGN.name,
         utrNumber: utrGen,
         donorEmail,
         donorTaxId,
+        contributionType: isNonCash ? nonCashType : "MONEY",
+        itemName: isNonCash ? nonCashItemName : undefined,
+        quantity: isNonCash ? nonCashQuantity : undefined,
+        unit: isNonCash ? nonCashUnit : undefined,
+        estimatedValue: isNonCash ? nonCashEstimatedValue : undefined,
+        inventory: isNonCash ? {
+          pledged: nonCashQuantity,
+          received: nonCashQuantity,
+          distributed: 0,
+          damaged: 0,
+          remaining: nonCashQuantity,
+        } : undefined,
       });
 
       // Synchronize with FastAPI Verifier Backend
@@ -370,14 +607,35 @@ export default function DonatePage() {
         const res = await fetch("http://127.0.0.1:8000/api/donate/simulate-deposit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            rail: isCrypto ? "CRYPTO" : "UPI",
-            token: tokenSymbol,
-            amount: depositAmount,
-            purposeId: ACTIVE_CAMPAIGN.id,
-            donorIdentifier: donorId,
-            utrNumber: utrGen,
-          }),
+          body: JSON.stringify(
+            isNonCash ? {
+              rail: "IN_KIND_LOGISTICS",
+              token: nonCashUnit.toUpperCase(),
+              amount: nonCashQuantity,
+              purposeId: ACTIVE_CAMPAIGN.id,
+              donorIdentifier: donorId,
+              contributionType: nonCashType,
+              itemName: nonCashItemName,
+              quantity: nonCashQuantity,
+              unit: nonCashUnit,
+              estimatedValue: nonCashEstimatedValue,
+              inventory: {
+                pledged: nonCashQuantity,
+                received: nonCashQuantity,
+                distributed: 0,
+                damaged: 0,
+                remaining: nonCashQuantity,
+              },
+            } : {
+              rail: isCrypto ? "CRYPTO" : "UPI",
+              token: tokenSymbol,
+              amount: depositAmount,
+              purposeId: ACTIVE_CAMPAIGN.id,
+              donorIdentifier: donorId,
+              utrNumber: utrGen,
+              contributionType: "MONEY",
+            }
+          ),
         });
 
         if (res.ok) {
@@ -392,7 +650,21 @@ export default function DonatePage() {
             fiatCurrency: selectedCurrency,
             donorEmail,
             donorTaxId,
-            stablecoinLocked: fiatEquivalentStablecoin,
+            stablecoinLocked: isNonCash ? null : fiatEquivalentStablecoin,
+            isNonCash,
+            contributionType: isNonCash ? nonCashType : "MONEY",
+            itemName: isNonCash ? nonCashItemName : null,
+            quantity: isNonCash ? nonCashQuantity : null,
+            unit: isNonCash ? nonCashUnit : null,
+            estimatedValueUsd: isNonCash ? nonCashEstimatedValue : null,
+            inventory: isNonCash ? {
+              pledged: nonCashQuantity,
+              received: nonCashQuantity,
+              distributed: 0,
+              damaged: 0,
+              remaining: nonCashQuantity,
+            } : null,
+            deliveryHub: isNonCash ? deliveryHub : null,
           });
           setIsSubmitting(false);
           setReceiptModalOpen(true);
@@ -411,12 +683,26 @@ export default function DonatePage() {
         explorerUrl: `https://sepolia.basescan.org/tx/${resolvedTxHash}`,
         blockNumber: 18492080 + Math.floor(Math.random() * 20),
         timestamp: new Date().toUTCString(),
-        rail: activeRail,
+        rail: isNonCash ? "IN_KIND_LOGISTICS" : activeRail,
         token: tokenSymbol,
         amountDeposited: depositAmount,
+        contributionType: isNonCash ? nonCashType : "MONEY",
+        isNonCash,
+        itemName: isNonCash ? nonCashItemName : null,
+        quantity: isNonCash ? nonCashQuantity : null,
+        unit: isNonCash ? nonCashUnit : null,
+        estimatedValueUsd: isNonCash ? nonCashEstimatedValue : null,
+        inventory: isNonCash ? {
+          pledged: nonCashQuantity,
+          received: nonCashQuantity,
+          distributed: 0,
+          damaged: 0,
+          remaining: nonCashQuantity,
+        } : null,
+        deliveryHub: isNonCash ? deliveryHub : null,
         fiatCurrency: selectedCurrency,
-        equivalentUsd: isCrypto ? cryptoEquivalentUsd.toFixed(2) : fiatEquivalentUsd.toFixed(2),
-        stablecoinLocked: isCrypto ? cryptoEquivalentUsd.toFixed(2) : fiatEquivalentStablecoin,
+        equivalentUsd: isNonCash ? nonCashEstimatedValue.toFixed(2) : isCrypto ? cryptoEquivalentUsd.toFixed(2) : fiatEquivalentUsd.toFixed(2),
+        stablecoinLocked: isNonCash ? null : isCrypto ? cryptoEquivalentUsd.toFixed(2) : fiatEquivalentStablecoin,
         donor: donorId,
         donorEmail,
         donorTaxId,
@@ -427,11 +713,13 @@ export default function DonatePage() {
           purposeName: ACTIVE_CAMPAIGN.name,
           category: ACTIVE_CAMPAIGN.category,
           keccak256Commitment: ACTIVE_CAMPAIGN.keccak256Commitment,
-          rule: "100% of these funds are locked in PurposeBoundEscrow.sol on Base Sepolia. Capital can only release against cryptographically verified hardware invoices.",
+          rule: isNonCash
+            ? "Verified physical delivery & warehouse custody tracking. In-kind goods are strictly segregated from cash escrow pools and tracked via itemized inventory manifests."
+            : "100% of these funds are locked in PurposeBoundEscrow.sol on Base Sepolia. Capital can only release against cryptographically verified hardware invoices.",
         },
         smartContract: {
           address: escrowConfig.defaultAddress || "0x3Af19B02cD319985E1e012399F319114d5e56E1",
-          state: escrowStatus === "FROZEN" ? "FROZEN" : "ACTIVE_LOCKED",
+          state: isNonCash ? "RECEIVED_IN_WAREHOUSE" : (escrowStatus === "FROZEN" ? "FROZEN" : "ACTIVE_LOCKED"),
           autonomousProtection: "Enabled (Semantic Nullifier + pHash duplicate check)",
         },
       };
@@ -547,27 +835,27 @@ export default function DonatePage() {
                 <span className="text-sm font-bold text-white">Choose Your Donation Method</span>
               </div>
 
-              {/* Segmented Rail Switcher */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              {/* Segmented Rail Switcher: Fiat, Crypto, Non-Cash */}
+              <div className="flex flex-wrap items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
                 <button
                   type="button"
                   id="tab-fiat-btn"
                   onClick={() => setActiveRail("FIAT")}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     activeRail === "FIAT"
                       ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
                   <Landmark className="w-3.5 h-3.5" />
-                  <span>Fiat &amp; Institutional</span>
+                  <span>Fiat Currency</span>
                 </button>
 
                 <button
                   type="button"
                   id="tab-crypto-btn"
                   onClick={() => setActiveRail("CRYPTO")}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     activeRail === "CRYPTO"
                       ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                       : "text-slate-400 hover:text-white"
@@ -575,6 +863,23 @@ export default function DonatePage() {
                 >
                   <Wallet className="w-3.5 h-3.5" />
                   <span>Web3 Crypto</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="tab-noncash-btn"
+                  onClick={() => setActiveRail("NON_CASH")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
+                    activeRail === "NON_CASH"
+                      ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Non-Cash In-Kind</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                    SUPPLIES
+                  </span>
                 </button>
               </div>
             </div>
@@ -814,7 +1119,7 @@ export default function DonatePage() {
                   )}
                 </button>
               </div>
-            ) : (
+            ) : activeRail === "CRYPTO" ? (
               /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                   TAB 2: WEB3 CRYPTO WALLET (ETH / USDC)
                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -991,6 +1296,389 @@ export default function DonatePage() {
                   )}
                 </button>
               </div>
+            ) : (
+              /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  TAB 3: NON-CASH IN-KIND SUPPLIES (GOODS, FOOD, MEDICAL, OTHER)
+                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+              <div className="space-y-6 animate-fade-in-up">
+                
+                {/* 1. Category Selection Cards */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Boxes className="w-4 h-4 text-amber-400" />
+                      1. Select In-Kind Contribution Category
+                    </label>
+                    <span className="text-[10px] font-mono text-amber-400 bg-amber-950/80 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                      INVENTORY TRACKED
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { type: "GOODS" as const, label: "Goods / Hardware", icon: Package, desc: "Pumps, piping, solar kits" },
+                      { type: "FOOD" as const, label: "Food Rations", icon: Utensils, desc: "Grain, meal packs, oil" },
+                      { type: "MEDICAL" as const, label: "Medical Supplies", icon: HeartPulse, desc: "Surgical kits, pharma" },
+                      { type: "OTHER" as const, label: "Other Assets", icon: Boxes, desc: "Shelter, logistics gear" },
+                    ].map(({ type, label, icon: Icon, desc }) => {
+                      const isSelected = nonCashType === type;
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setNonCashType(type);
+                            // Auto-populate first preset of category if available
+                            const categoryPresets = NON_CASH_PRESETS[type] || [];
+                            const firstPreset = categoryPresets[0];
+                            if (firstPreset) {
+                              setNonCashItemName(firstPreset.name);
+                              setNonCashQuantity(firstPreset.defaultQty);
+                              setNonCashUnit(firstPreset.unit);
+                              setNonCashEstimatedValue(firstPreset.defaultEstVal);
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+                            isSelected
+                              ? "bg-amber-950/40 border-amber-500/70 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                              : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                              isSelected
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                                : "bg-slate-800 text-slate-400 border border-slate-700/50"
+                            }`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                            )}
+                          </div>
+                          <div className={`text-xs font-bold leading-tight ${isSelected ? "text-white" : "text-slate-300"}`}>
+                            {label}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-1 line-clamp-1">
+                            {desc}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Quick Presets Bar */}
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-amber-400" />
+                      Popular Supply Catalogs ({nonCashType}):
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500">Click to autofill spec</span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {(NON_CASH_PRESETS[nonCashType] || []).map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => {
+                          setNonCashItemName(preset.name);
+                          setNonCashQuantity(preset.defaultQty);
+                          setNonCashUnit(preset.unit);
+                          setNonCashEstimatedValue(preset.defaultEstVal);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all shrink-0 border ${
+                          nonCashItemName === preset.name
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm"
+                            : "bg-slate-900 text-slate-400 hover:text-white border-slate-800 hover:border-slate-700"
+                        }`}
+                      >
+                        {preset.name} ({preset.defaultQty} {preset.unit})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Conditional Item Specification Fields */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <ClipboardList className="w-4 h-4 text-indigo-400" />
+                      2. Supply Specification &amp; Quantities
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">MANIFEST DISPATCH #01</span>
+                  </div>
+
+                  {/* Item Name Input */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-400 flex items-center justify-between">
+                      <span>Item Name &amp; Technical Description *</span>
+                      <span className="text-[10px] text-slate-500 font-mono">E.g., Manufacturer &amp; model</span>
+                    </label>
+                    <input
+                      id="noncash-item-name-input"
+                      type="text"
+                      value={nonCashItemName}
+                      onChange={(e) => setNonCashItemName(e.target.value)}
+                      placeholder="e.g. Solar Submersible Borewell Pump (5HP)"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium text-sm transition-all"
+                    />
+                  </div>
+
+                  {/* Quantity & Unit Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400">
+                        Donation Quantity *
+                      </label>
+                      <input
+                        id="noncash-quantity-input"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={nonCashQuantity}
+                        onChange={(e) => setNonCashQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-amber-500 font-mono font-bold text-sm transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-400">
+                        Measurement Unit *
+                      </label>
+                      <select
+                        id="noncash-unit-select"
+                        value={nonCashUnit}
+                        onChange={(e) => setNonCashUnit(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-amber-500 font-mono text-sm transition-all"
+                      >
+                        <option value="units">units (Individual Equipment)</option>
+                        <option value="kits">kits (Pre-packaged sets)</option>
+                        <option value="sacks (50kg)">sacks (50kg Fortified Bag)</option>
+                        <option value="cartons">cartons (Sealed shipping boxes)</option>
+                        <option value="boxes">boxes (Medical packs)</option>
+                        <option value="liters">liters (Fluid / Solution)</option>
+                        <option value="metric tons">metric tons (Bulk grain / metal)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Estimated Market Valuation (Explicitly Separated from Cash) */}
+                <div className="p-5 rounded-3xl bg-amber-950/20 border-2 border-amber-500/40 space-y-3.5 relative overflow-hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <Tag className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-mono font-bold text-amber-300 uppercase">
+                        3. Estimated Fair Market Value
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold tracking-tight">
+                      SEPARATED FROM LIQUID CASH ESCROW
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Total Declared Valuation ({nonCashCurrency}) *
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-slate-400 font-bold">
+                          {nonCashCurrency === "USD" ? "$" : "₹"}
+                        </span>
+                        <input
+                          id="noncash-value-input"
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={nonCashEstimatedValue}
+                          onChange={(e) => setNonCashEstimatedValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                          className="w-full pl-8 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-amber-200 focus:outline-none focus:border-amber-400 font-mono font-bold text-sm transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Currency Basis
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setNonCashCurrency("USD")}
+                          className={`py-3 rounded-xl text-xs font-mono font-bold transition-all border ${
+                            nonCashCurrency === "USD"
+                              ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                              : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
+                          }`}
+                        >
+                          USD ($)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNonCashCurrency("INR")}
+                          className={`py-3 rounded-xl text-xs font-mono font-bold transition-all border ${
+                            nonCashCurrency === "INR"
+                              ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                              : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
+                          }`}
+                        >
+                          INR (₹)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Explicit Cash-Separation Callout Notice */}
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-amber-500/20 text-[11px] text-slate-300 leading-relaxed space-y-1">
+                    <div className="text-amber-400 font-bold flex items-center gap-1.5 font-mono text-[10px] uppercase">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      Audited Accounting Isolation Notice
+                    </div>
+                    <p className="text-slate-400">
+                      Non-cash in-kind goods are tracked through physical warehouse inventory manifests. Valuation is strictly recorded for customs transit insurance, logistics bonding, and tax exemption compliance (80G / IRS 501(c)(3)). It is <strong className="text-amber-200">never commingled with liquid cash escrow pools</strong> to preserve cryptographic tranche solvency.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 5. Real-Time Inventory Ledger Lifecycle Preview (5 Metrics) */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <Warehouse className="w-4 h-4 text-emerald-400" />
+                      4. Inventory Tracking Lifecycle Preview
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400">Initial State on Intake</span>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-2 text-center font-mono">
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="text-[9px] text-slate-500 uppercase">1. Pledged</div>
+                      <div className="text-xs font-bold text-indigo-400 mt-1">{nonCashQuantity}</div>
+                      <div className="text-[9px] text-slate-500 truncate">{nonCashUnit}</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="text-[9px] text-slate-500 uppercase">2. Received</div>
+                      <div className="text-xs font-bold text-emerald-400 mt-1">{nonCashQuantity}</div>
+                      <div className="text-[9px] text-slate-500 truncate">{nonCashUnit}</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="text-[9px] text-slate-500 uppercase">3. Distributed</div>
+                      <div className="text-xs font-bold text-slate-400 mt-1">0</div>
+                      <div className="text-[9px] text-slate-500 truncate">{nonCashUnit}</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="text-[9px] text-slate-500 uppercase">4. Damaged</div>
+                      <div className="text-xs font-bold text-rose-400 mt-1">0</div>
+                      <div className="text-[9px] text-slate-500 truncate">{nonCashUnit}</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950 border border-emerald-500/30 bg-emerald-950/20">
+                      <div className="text-[9px] text-emerald-400 uppercase font-bold">5. Remaining</div>
+                      <div className="text-xs font-bold text-emerald-300 mt-1">{nonCashQuantity}</div>
+                      <div className="text-[9px] text-emerald-500 truncate">{nonCashUnit}</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span>Warehouse Storage Allocation</span>
+                      <span className="text-emerald-400">100% In Stock Available for Village Dispatch</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                      <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full w-full" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Destination Logistics Hub & Donor Compliance Details */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <Truck className="w-4 h-4 text-purple-400" />
+                      5. Logistics Drop-Off Hub &amp; Donor Receipt
+                    </span>
+                    <span className="text-[10px] font-mono text-purple-400">PHYSICAL RECEIVING HUB</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-400">
+                      Designated Physical Intake Warehouse Depot *
+                    </label>
+                    <select
+                      id="noncash-hub-select"
+                      value={deliveryHub}
+                      onChange={(e) => setDeliveryHub(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
+                    >
+                      <option value="Maharashtra Central Logistics Hub #4 — Wardha Cluster">
+                        Maharashtra Central Logistics Hub #4 — Wardha Cluster (Facility A-12)
+                      </option>
+                      <option value="Rajasthan Regional Storage Hub #2 — Barmer Depot">
+                        Rajasthan Regional Storage Hub #2 — Barmer Depot (Cold Storage &amp; Dry Goods)
+                      </option>
+                      <option value="Marathwada Relief Staging Depot #1 — Latur Sub-station">
+                        Marathwada Relief Staging Depot #1 — Latur Sub-station (Medical Supply Bay)
+                      </option>
+                      <option value="Karnataka North Hub — Hubballi Logistics Terminal">
+                        Karnataka North Hub — Hubballi Logistics Terminal (Agricultural Hardware)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-400">
+                        Donor / Entity Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={donorName}
+                        onChange={(e) => setDonorName(e.target.value)}
+                        placeholder="Corporate Sponsor or Individual Donor"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-400">
+                        Tax / Organization ID (PAN / EIN)
+                      </label>
+                      <input
+                        type="text"
+                        value={donorTaxId}
+                        onChange={(e) => setDonorTaxId(e.target.value)}
+                        placeholder="For In-Kind Exemption Certificate"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7. Submit Action Button */}
+                <button
+                  id="donate-noncash-submit-btn"
+                  type="button"
+                  onClick={handleExecuteDonation}
+                  disabled={isSubmitting || !nonCashItemName || nonCashQuantity <= 0}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 hover:from-amber-500 hover:to-orange-500 text-slate-950 font-black text-sm tracking-wide shadow-[0_0_25px_rgba(245,158,11,0.4)] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>Generating Inventory Manifest &amp; Commitment Proof...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform" />
+                      <span>Commit Non-Cash Contribution &amp; Generate Inventory Manifest</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1092,25 +1780,100 @@ export default function DonatePage() {
               </div>
 
               <div className="space-y-2">
-                {recentTxs.slice(0, 5).map((d) => (
-                  <div
-                    key={d.id}
-                    className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <div className="font-bold text-slate-200 truncate">{d.donor}</div>
-                      <div className="text-[10px] text-slate-500 font-mono truncate">
-                        {d.rail === "CRYPTO" ? "Web3 Smart Escrow" : `${d.utrNumber || "Verified Gateway"} · Fiat`}
+                {recentTxs.slice(0, 6).map((d) => {
+                  const isNonCash = d.contributionType && d.contributionType !== "MONEY";
+                  const isExpanded = expandedInventoryId === d.id;
+                  const typeColors: Record<string, { bg: string; text: string; border: string }> = {
+                    MONEY: { bg: "bg-emerald-950/60", text: "text-emerald-400", border: "border-emerald-500/30" },
+                    GOODS: { bg: "bg-amber-950/60", text: "text-amber-400", border: "border-amber-500/30" },
+                    FOOD: { bg: "bg-orange-950/60", text: "text-orange-400", border: "border-orange-500/30" },
+                    MEDICAL: { bg: "bg-rose-950/60", text: "text-rose-400", border: "border-rose-500/30" },
+                    OTHER: { bg: "bg-purple-950/60", text: "text-purple-400", border: "border-purple-500/30" },
+                  };
+                  const colorCfg = typeColors[d.contributionType || "MONEY"] || typeColors.MONEY;
+
+                  return (
+                    <div
+                      key={d.id}
+                      className="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2 text-xs transition-all hover:border-slate-700"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0 ${colorCfg.bg} ${colorCfg.text} ${colorCfg.border}`}>
+                            {d.contributionType || "MONEY"}
+                          </span>
+                          <span className="font-bold text-slate-200 truncate">{d.donor}</span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono font-bold text-emerald-400">
+                            {isNonCash ? `${d.quantity || d.amount} ${d.unit || ""}` : d.amount}
+                          </div>
+                          {isNonCash ? (
+                            <div className="text-[10px] text-amber-400/90 font-mono">
+                              Est. ${typeof d.estimatedValue === "number" ? d.estimatedValue.toLocaleString() : (typeof d.amountUsd === "number" ? d.amountUsd.toLocaleString() : d.amountUsd)}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {typeof d.amountUsd === "number" ? `$${d.amountUsd.toLocaleString()}` : d.amountUsd}
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {isNonCash && d.itemName && (
+                        <div className="text-[11px] text-slate-400 font-medium truncate flex items-center gap-1.5">
+                          <Package className="w-3 h-3 text-slate-500 shrink-0" />
+                          <span>{d.itemName}</span>
+                        </div>
+                      )}
+
+                      {/* Non-cash inventory lifecycle status drawer */}
+                      {isNonCash && d.inventory && (
+                        <div className="pt-1 border-t border-slate-900">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedInventoryId(isExpanded ? null : d.id)}
+                            className="text-[10px] font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition"
+                          >
+                            <Warehouse className="w-3 h-3" />
+                            <span>{isExpanded ? "Hide Inventory Tracking" : "View Inventory Lifecycle (5 Metrics)"}</span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-2 p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-[10px] font-mono grid grid-cols-5 gap-1 text-center animate-fade-in">
+                              <div className="p-1 rounded bg-slate-950/60">
+                                <div className="text-slate-500 text-[8px] uppercase">Pledged</div>
+                                <div className="font-bold text-indigo-300">{d.inventory.pledged}</div>
+                              </div>
+                              <div className="p-1 rounded bg-slate-950/60">
+                                <div className="text-slate-500 text-[8px] uppercase">Rcvd</div>
+                                <div className="font-bold text-emerald-400">{d.inventory.received}</div>
+                              </div>
+                              <div className="p-1 rounded bg-slate-950/60">
+                                <div className="text-slate-500 text-[8px] uppercase">Dist</div>
+                                <div className="font-bold text-slate-300">{d.inventory.distributed}</div>
+                              </div>
+                              <div className="p-1 rounded bg-slate-950/60">
+                                <div className="text-slate-500 text-[8px] uppercase">Dmg</div>
+                                <div className="font-bold text-rose-400">{d.inventory.damaged}</div>
+                              </div>
+                              <div className="p-1 rounded bg-slate-950/60 border border-emerald-500/30">
+                                <div className="text-emerald-400 text-[8px] uppercase font-bold">Rem</div>
+                                <div className="font-bold text-emerald-300">{d.inventory.remaining}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!isNonCash && (
+                        <div className="text-[10px] text-slate-500 font-mono truncate">
+                          {d.rail === "CRYPTO" ? "Web3 PurposeBoundEscrow" : `${d.utrNumber || "Verified Gateway"} · Fiat`}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-mono font-bold text-emerald-400">{d.amount}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        {typeof d.amountUsd === "number" ? `$${d.amountUsd.toLocaleString()}` : d.amountUsd}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1188,55 +1951,129 @@ export default function DonatePage() {
             
             {/* Header */}
             <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                <CheckCircle2 className="w-8 h-8" />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-lg ${
+                receiptData.isNonCash
+                  ? "bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                  : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+              }`}>
+                {receiptData.isNonCash ? <Package className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
               </div>
-              <h3 className="text-xl font-black text-white">Donation Successfully Locked</h3>
+              <h3 className="text-xl font-black text-white">
+                {receiptData.isNonCash ? "In-Kind Manifest Committed" : "Donation Successfully Locked"}
+              </h3>
               <p className="text-xs text-slate-400">
-                Your funds have been securely transferred and locked in <code className="text-indigo-300 font-mono">PurposeBoundEscrow.sol</code>.
+                {receiptData.isNonCash ? (
+                  <>
+                    Physical supply consignment registered with warehouse intake depot. Non-cash inventory is{" "}
+                    <span className="text-amber-300 font-semibold">segregated from liquid cash pools</span>.
+                  </>
+                ) : (
+                  <>
+                    Your funds have been securely transferred and locked in <code className="text-indigo-300 font-mono">PurposeBoundEscrow.sol</code>.
+                  </>
+                )}
               </p>
             </div>
 
             {/* Receipt Summary Card */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5 font-mono text-xs">
               <div className="flex items-center justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-500">Transaction Hash</span>
+                <span className="text-slate-500">{receiptData.isNonCash ? "Manifest Commitment" : "Transaction Hash"}</span>
                 <div className="flex items-center gap-1.5 text-indigo-400 font-bold">
-                  <span>{receiptData.txHash.slice(0, 10)}...{receiptData.txHash.slice(-8)}</span>
+                  <span>{(receiptData.itemManifestCommitment || receiptData.txHash).slice(0, 10)}...{(receiptData.itemManifestCommitment || receiptData.txHash).slice(-8)}</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(receiptData.txHash)}
+                    onClick={() => handleCopy(receiptData.itemManifestCommitment || receiptData.txHash)}
                     className="hover:text-white"
-                    title="Copy Tx Hash"
+                    title="Copy Hash"
                   >
                     {copiedTx ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-500">Amount Deposited</span>
-                <span className="text-emerald-400 font-bold">
-                  {receiptData.amountDeposited} {receiptData.token} (≈ ${receiptData.equivalentUsd} USD)
-                </span>
-              </div>
+              {receiptData.isNonCash ? (
+                <>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Contribution Type</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                      {receiptData.contributionType || "GOODS"} (IN-KIND)
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-500">Purpose Earmark</span>
-                <span className="text-slate-200 font-bold truncate max-w-[200px]">
-                  {receiptData.purposeBound.category}
-                </span>
-              </div>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Item Specification</span>
+                    <span className="text-slate-200 font-bold truncate max-w-[200px]">
+                      {receiptData.itemName || "In-Kind Goods"}
+                    </span>
+                  </div>
 
-              {receiptData.utrNumber && (
-                <div className="flex items-center justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-500">Banking UTR</span>
-                  <span className="text-slate-200 font-bold">{receiptData.utrNumber}</span>
-                </div>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Quantity &amp; Unit</span>
+                    <span className="text-emerald-400 font-bold">
+                      {receiptData.quantity} {receiptData.unit}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Declared Valuation</span>
+                    <span className="text-amber-300 font-bold">
+                      ${(receiptData.estimatedValueUsd || receiptData.estimatedValue || 0).toLocaleString()} USD (In-Kind Only)
+                    </span>
+                  </div>
+
+                  {receiptData.inventory && (
+                    <div className="py-2 border-b border-slate-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>Inventory Tracking Status</span>
+                        <span className="text-emerald-400 font-bold">100% In Warehouse</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1 text-[9px] text-center">
+                        <div className="p-1 rounded bg-slate-900 text-slate-400">Pledged: {receiptData.inventory.pledged}</div>
+                        <div className="p-1 rounded bg-slate-900 text-emerald-400 font-bold">Rcvd: {receiptData.inventory.received}</div>
+                        <div className="p-1 rounded bg-slate-900 text-slate-400">Dist: {receiptData.inventory.distributed}</div>
+                        <div className="p-1 rounded bg-slate-900 text-rose-400">Dmg: {receiptData.inventory.damaged}</div>
+                        <div className="p-1 rounded bg-slate-900 text-emerald-300 font-bold">Rem: {receiptData.inventory.remaining}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {receiptData.deliveryHub && (
+                    <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-500">Intake Hub</span>
+                      <span className="text-slate-300 truncate max-w-[200px] text-[10px]">
+                        {receiptData.deliveryHub}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Amount Deposited</span>
+                    <span className="text-emerald-400 font-bold">
+                      {receiptData.amountDeposited} {receiptData.token} (≈ ${receiptData.equivalentUsd} USD)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Purpose Earmark</span>
+                    <span className="text-slate-200 font-bold truncate max-w-[200px]">
+                      {receiptData.purposeBound?.category || ACTIVE_CAMPAIGN.category}
+                    </span>
+                  </div>
+
+                  {receiptData.utrNumber && (
+                    <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                      <span className="text-slate-500">Banking UTR</span>
+                      <span className="text-slate-200 font-bold">{receiptData.utrNumber}</span>
+                    </div>
+                  )}
+                </>
               )}
 
               <div className="flex items-center justify-between py-1">
-                <span className="text-slate-500">80G Certificate</span>
+                <span className="text-slate-500">{receiptData.isNonCash ? "In-Kind Exemption" : "80G Certificate"}</span>
                 <span className="text-indigo-300 font-bold">{receiptData.taxReceiptId || "80G-2026-902184"}</span>
               </div>
             </div>

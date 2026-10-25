@@ -377,3 +377,49 @@ export interface AdversarialSimulationReport {
   items: AdversarialSimulationItem[];
 }
 
+/* ────────────────────────────────────────────────────────────
+   Feature 1: Non-Cash Donations & Real-Time Inventory Tracking
+──────────────────────────────────────────────────────────── */
+export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+
+export interface InventoryTracking {
+  pledged: number;
+  received: number;
+  distributed: number;
+  damaged: number;
+  remaining: number;
+}
+
+export interface NonCashDonationDetails {
+  itemName: string;
+  quantity: number;
+  unit: string;
+  estimatedValue: number;
+  estimatedValueCurrency: string;
+  inventory: InventoryTracking;
+  deliveryHub?: string;
+  condition?: "NEW" | "SEALED_STERILE" | "CERTIFIED_FOOD_GRADE" | "REFURBISHED";
+}
+
+export interface DonationRecord {
+  id: string;
+  donor: string;
+  donorFull?: string;
+  amount: string;
+  amountUsd?: number | string;
+  amountInr?: number | string;
+  rail: "CRYPTO" | "FIAT" | "UPI" | "IN_KIND_LOGISTICS";
+  token?: string;
+  purpose: string;
+  txHash: string;
+  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE";
+  timestamp: string;
+  block?: number;
+  utrNumber?: string | null;
+  contributionType: ContributionType;
+  itemName?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  estimatedValue?: number | null;
+  inventory?: InventoryTracking | null;
+}
