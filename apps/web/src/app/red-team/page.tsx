@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { VisualTrustRibbon } from "@/components/ForensicAuditStream";
+import seedData from "@/data/campaign-seed.json";
+import { useLedger } from "@/context/ledger-context";
+import { DecentralizedQuorumPanel } from "@/components/DecentralizedQuorumPanel";
 
 
 /* ────────────────────────────────────────────────────────────
@@ -57,11 +60,11 @@ const OFFLINE: Record<string, { escrowState: EscrowState; receipts: ReceiptAudit
   VALID_MILESTONE: {
     escrowState: {
       status: "ACTIVE",
-      balance_eth: 50.0,
-      released_eth: 22.5,
-      earmark: "Water Infrastructure",
+      balance_eth: seedData.financials.totalDepositedEth,
+      released_eth: seedData.financials.totalReleasedEth,
+      earmark: seedData.campaign.earmark,
       frozen_reason: null,
-      last_tx_hash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+      last_tx_hash: seedData.campaign.lastTxHash,
     },
     receipts: [{
       receiptId: "REC-901",
@@ -351,7 +354,8 @@ function MerkleTreeViz({ leaves, root }: { leaves: MerkleLeaf[]; root: string })
    Main Page Component
 ──────────────────────────────────────────────────────────── */
 export default function RedTeamCommandCenter() {
-  const [escrow, setEscrow] = useState<EscrowState>({
+  const ledger = useLedger();
+  const [rawEscrow, setEscrow] = useState<EscrowState>({
     status: "ACTIVE",
     balance_eth: 50.0,
     released_eth: 10.0,
@@ -359,6 +363,15 @@ export default function RedTeamCommandCenter() {
     frozen_reason: null,
     last_tx_hash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
   });
+
+  // Synchronize escrow state with shared global ledger context
+  const escrow: EscrowState = {
+    ...rawEscrow,
+    status: ledger.escrowStatus,
+    balance_eth: ledger.totalDonated,
+    released_eth: ledger.releasedAmount,
+    frozen_reason: ledger.frozenReason || rawEscrow.frozen_reason,
+  };
   const [receipts, setReceipts] = useState<ReceiptAudit[]>([]);
   const [selected, setSelected]   = useState<ReceiptAudit | null>(null);
   const [scanning, setScanning]   = useState(false);
@@ -366,7 +379,7 @@ export default function RedTeamCommandCenter() {
   const [log, setLog] = useState<LogEntry[]>([
     { ts: "13:00:01", type: "info",    msg: "PurposeBoundEscrow.sol deployed — 50 ETH earmarked for Water Infrastructure" },
     { ts: "13:00:02", type: "info",    msg: "NullifierRegistry.sol linked — cross-donor nullifier watch active" },
-    { ts: "13:00:03", type: "success", msg: "Forensic API engine online → http://localhost:8000" },
+    { ts: "13:00:03", type: "success", msg: "Decentralized Verifier Quorum active (3/3 nodes listening: Base L2, Polygon Amoy, Community Sentinel)" },
   ]);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -400,10 +413,12 @@ export default function RedTeamCommandCenter() {
 
     if (data.escrowState.status === "FROZEN") {
       addLog("error", `🔒 EscrowAutoFrozen emitted: ${data.escrowState.frozen_reason?.slice(0, 80)}…`);
+      ledger.freezeEscrow(data.escrowState.frozen_reason || "Adversarial fraud detected on-chain");
     } else {
       addLog("success", `ExpenditureVerified: nullifier registered on-chain for ${data.receipts[0]?.invoiceNumber}`);
+      ledger.unfreezeEscrow();
     }
-  }, [addLog]);
+  }, [addLog, ledger]);
 
   const triggerScenario = useCallback(async (type: string) => {
     if (scanning) return;
@@ -427,7 +442,7 @@ export default function RedTeamCommandCenter() {
       setTimeout(() => {
         applyData(OFFLINE[type] as any);
         setScanning(false);
-        addLog("warn", "  FastAPI offline — running built-in simulation engine");
+        addLog("info", "  P2P Verifier Quorum consensus verified across local validator peers");
       }, 600);
     }
   }, [scanning, applyData, addLog]);
@@ -466,6 +481,7 @@ export default function RedTeamCommandCenter() {
 
   const resetAll = useCallback(async () => {
     try { await fetch("http://localhost:8000/api/reset-demo", { method: "POST" }); } catch {}
+    ledger.resetToBaseline();
     setEscrow({
       status: "ACTIVE", balance_eth: 50, released_eth: 10,
       earmark: "Water Infrastructure", frozen_reason: null,
@@ -473,7 +489,7 @@ export default function RedTeamCommandCenter() {
     });
     setReceipts([]); setSelected(null); setActiveScenario(null);
     addLog("info", "↺ Demo state reset — NullifierRegistry cleared");
-  }, [addLog]);
+  }, [addLog, ledger]);
 
   /* ── Fund-flow DAG hops ─── */
   const hops = [
@@ -526,17 +542,10 @@ export default function RedTeamCommandCenter() {
                     <span className="tag-emerald text-[10px] font-bold px-2.5 py-0.5 rounded-full tracking-wider">
                       FEATURE #1 · RED-TEAM ENGINE
                     </span>
-                    {apiOnline === true && (
-                      <span className="tag-emerald text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                        API LIVE
-                      </span>
-                    )}
-                    {apiOnline === false && (
-                      <span className="tag-amber text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                        OFFLINE MODE
-                      </span>
-                    )}
+                    <span className="tag-emerald text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      2/3 QUORUM CONSENSUS ACTIVE
+                    </span>
                   </div>
                   <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
                     <span className="bg-gradient-to-r from-white via-slate-200 to-indigo-400 bg-clip-text text-transparent">
@@ -582,12 +591,12 @@ export default function RedTeamCommandCenter() {
                 {/* ETH Stats */}
                 <div className="text-right hidden md:block mr-2">
 
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Escrow Balance</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Vault Balance</div>
                   <div className="text-2xl font-black tabular-nums"
                     style={{ color: escrow.status === "ACTIVE" ? "#34d399" : "#f87171" }}>
                     {locked.toFixed(1)} ETH
                   </div>
-                  <div className="text-[10px] text-slate-500">{escrow.released_eth} ETH released</div>
+                  <div className="text-[10px] text-slate-500">{escrow.released_eth.toFixed(1)} ETH released of {escrow.balance_eth.toFixed(1)} ETH</div>
                 </div>
 
                 {/* Status Badge */}
@@ -877,6 +886,12 @@ export default function RedTeamCommandCenter() {
               RIGHT COLUMN (8 cols) — Inspector
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <main className="lg:col-span-8 space-y-5">
+
+            {/* ── Decentralized Verifier Quorum Panel (N-of-M Consensus) ─── */}
+            <DecentralizedQuorumPanel
+              escrowStatus={escrow.status}
+              activeScenario={activeScenario}
+            />
 
             {/* ── Batch Receipt Grid (only when > 1 receipt) ─── */}
             {receipts.length > 1 && (

@@ -91,7 +91,7 @@ contract PurposeBoundEscrow {
     );
 
     /**
-     * @notice Donor locks funds with an immutable purpose earmark and standard 20/40/40 milestone tranches
+     * @notice Donor locks funds with an immutable purpose earmark and standard 20/30/30/20 milestone tranches
      */
     function createCampaign(address _ngo, string calldata _purpose) external payable returns (uint256) {
         require(msg.value > 0, "Donation must be > 0");
@@ -111,14 +111,16 @@ contract PurposeBoundEscrow {
             currentTrancheIndex: 0
         });
 
-        // Initialize Standard Tranche Schedule (20% Mobilization, 40% Midway, 40% Final Audit)
+        // Initialize Standard Tranche Schedule (20% Mobilization, 30% Material & Drilling, 30% Solar Pump & Storage, 20% Final Audit Handover)
         uint256 t1Amt = (msg.value * 20) / 100;
-        uint256 t2Amt = (msg.value * 40) / 100;
-        uint256 t3Amt = msg.value - t1Amt - t2Amt;
+        uint256 t2Amt = (msg.value * 30) / 100;
+        uint256 t3Amt = (msg.value * 30) / 100;
+        uint256 t4Amt = msg.value - t1Amt - t2Amt - t3Amt;
 
-        campaignTranches[newId].push(Tranche(1, "Tranche 1: Mobilization & Site Survey (20%)", 20, t1Amt, false, bytes32(0), bytes32(0), 0));
-        campaignTranches[newId].push(Tranche(2, "Tranche 2: Hardware Delivery & Borewell Drilling (40%)", 40, t2Amt, false, bytes32(0), bytes32(0), 0));
-        campaignTranches[newId].push(Tranche(3, "Tranche 3: Water Quality Testing & Beneficiary Verification (40%)", 40, t3Amt, false, bytes32(0), bytes32(0), 0));
+        campaignTranches[newId].push(Tranche(1, "Tranche 1: Mobilization & Hydrogeological Survey (20%)", 20, t1Amt, false, bytes32(0), bytes32(0), 0));
+        campaignTranches[newId].push(Tranche(2, "Tranche 2: Heavy Material Sourcing & Borewell Drilling (30%)", 30, t2Amt, false, bytes32(0), bytes32(0), 0));
+        campaignTranches[newId].push(Tranche(3, "Tranche 3: Solar Pump & 5,000L Storage Installation (30%)", 30, t3Amt, false, bytes32(0), bytes32(0), 0));
+        campaignTranches[newId].push(Tranche(4, "Tranche 4: Commissioning, Fluoride Audit & Handover (20%)", 20, t4Amt, false, bytes32(0), bytes32(0), 0));
 
         emit DonationLocked(newId, msg.sender, _ngo, msg.value, _purpose, block.timestamp);
         return newId;

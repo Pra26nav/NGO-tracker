@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { GlobalNavbar } from "@/components/GlobalNavbar";
+import { LedgerProvider } from "@/context/ledger-context";
+import { LiveSyncBanner } from "@/components/LiveSyncBanner";
 
 export const metadata: Metadata = {
   title: "The Black Hole Ledger | Verifiable NGO Fund Flows — CASCADE '26",
@@ -22,8 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col bg-slate-950 text-slate-100">
-        <GlobalNavbar />
-        <div className="flex-1 w-full">{children}</div>
+        <LedgerProvider>
+          <GlobalNavbar />
+          <LiveSyncBanner />
+          <div className="flex-1 w-full">{children}</div>
+        </LedgerProvider>
       </body>
     </html>
   );

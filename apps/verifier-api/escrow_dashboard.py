@@ -6,6 +6,8 @@ Zero-Conflict Isolated Backend Module
 
 import hashlib
 import time
+import os
+import json
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Form
 from pydantic import BaseModel
@@ -15,72 +17,131 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 def sha256_hex(data: str) -> str:
     return "0x" + hashlib.sha256(data.encode("utf-8")).hexdigest()
 
+def load_seed_json() -> Dict[str, Any]:
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "packages", "shared", "campaign-seed.json")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "src", "data", "campaign-seed.json")),
+        os.path.abspath("packages/shared/campaign-seed.json"),
+        os.path.abspath("apps/web/src/data/campaign-seed.json"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            with open(c, "r", encoding="utf-8") as f:
+                return json.load(f)
+    return {}
+
+SEED_DATA = load_seed_json()
+
 # ────────────────────────────────────────────────────────────
-# Global In-Memory Escrow & Tranche State (Mirrors Smart Contract)
+# Global In-Memory Escrow & Tranche State (Mirrors Smart Contract & Seed)
 # ────────────────────────────────────────────────────────────
 CAMPAIGN_STATE = {
-    "id": 1,
-    "donorAddress": "0x71C9414B8B67B543D75e3Ea2E59E50Eb147Eb901",
-    "ngoAddress": "0x217e9C3182B0058b76D63E666C2c502b4e89991A",
-    "earmarkedPurpose": "Water Infrastructure",
-    "totalDepositedEth": 50.0,
-    "totalReleasedEth": 10.0,
-    "isFrozen": False,
-    "freezeReason": "",
+    "id": SEED_DATA.get("campaign", {}).get("campaignId", 1),
+    "name": SEED_DATA.get("campaign", {}).get("name", "Rural Water Infrastructure Fund (Maharashtra Cluster)"),
+    "donorAddress": SEED_DATA.get("campaign", {}).get("donorAddress", "0x71C9414B8B67B543D75e3Ea2E59E50Eb147Eb901"),
+    "ngoAddress": SEED_DATA.get("campaign", {}).get("ngoAddress", "0x217e9C3182B0058b76D63E666C2c502b4e89991A"),
+    "earmarkedPurpose": SEED_DATA.get("campaign", {}).get("earmarkedPurpose", "Water Infrastructure"),
+    "totalDepositedEth": float(SEED_DATA.get("financials", {}).get("totalDepositedEth", 50.0)),
+    "totalReleasedEth": float(SEED_DATA.get("financials", {}).get("totalReleasedEth", 10.0)),
+    "vaultBalanceEth": float(SEED_DATA.get("financials", {}).get("vaultBalanceEth", 40.0)),
+    "isFrozen": SEED_DATA.get("escrowState", {}).get("status") == "FROZEN",
+    "freezeReason": SEED_DATA.get("escrowState", {}).get("frozen_reason") or "",
     "freezeTimestamp": None,
-    "currentTrancheIndex": 1, # Tranche 1 released, Tranche 2 active
-    "contractAddress": "0x3Af19B02cD319985E1e012399F319114d5e56E1",
-    "network": "Ethereum Sepolia / Mainnet",
-    "lastTxHash": "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+    "currentTrancheIndex": 1,
+    "contractAddress": SEED_DATA.get("campaign", {}).get("contractAddress", "0x3Af19B02cD319985E1e012399F319114d5e56E1"),
+    "nullifierRegistry": SEED_DATA.get("campaign", {}).get("nullifierRegistry", "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"),
+    "network": SEED_DATA.get("campaign", {}).get("network", "Ethereum Sepolia / Mainnet"),
+    "lastTxHash": SEED_DATA.get("campaign", {}).get("lastTxHash", "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7"),
 }
 
-TRANCHES = [
-    {
-        "trancheId": 1,
-        "name": "Tranche 1: Mobilization & Geological Aquifer Survey",
-        "percentage": 20,
-        "amountEth": 10.0,
-        "amountUsd": 32000.0,
-        "amountInr": 2692800.0,
-        "status": "RELEASED",
-        "description": "Initial mobilization, hydro-geological mapping, and contractor site survey across 4 target village clusters.",
-        "verifiedNullifier": "0x88c1901f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e33e1",
-        "verifiedMerkleRoot": "0x856c30affcf0560c9a992bfbeb4f8691fd1cc00cc943390101fddcd734135370",
-        "releasedAt": "2026-10-24 14:20:00 UTC",
-        "txHash": "0x5e19f2bb0088aa9911cc22dd33445566778899aabbccddeeff00112233445566",
-        "recipientVendor": "Vidarbha Geological & Drilling Consultancy (GSTIN-27VWW001Z)"
-    },
-    {
-        "trancheId": 2,
-        "name": "Tranche 2: Heavy Hardware Procurement & Borewell Casing Drilling",
-        "percentage": 40,
-        "amountEth": 20.0,
-        "amountUsd": 64000.0,
-        "amountInr": 5385600.0,
-        "status": "PENDING_VERIFICATION",
-        "description": "Procurement of 4x 5HP submersible pumps, 200m 150mm heavy PVC casing pipes, and deep-well drilling rigs.",
-        "verifiedNullifier": None,
-        "verifiedMerkleRoot": None,
-        "releasedAt": None,
-        "txHash": None,
-        "recipientVendor": "Maharashtra Borewell & PVC Supply Co. (GSTIN-27WATER9988Z)"
-    },
-    {
-        "trancheId": 3,
-        "name": "Tranche 3: Water Filtration, Solar Integration & Beneficiary Handover",
-        "percentage": 40,
-        "amountEth": 20.0,
-        "amountUsd": 64000.0,
-        "amountInr": 5385600.0,
-        "status": "LOCKED",
-        "description": "Solar inverter connection, multi-stage water filtration, fluoride reduction audit, and handover to 142 Grampanchayat households.",
-        "verifiedNullifier": None,
-        "verifiedMerkleRoot": None,
-        "releasedAt": None,
-        "txHash": None,
-        "recipientVendor": "Apex Green Solar & Clean Water Ltd (GSTIN-27SOLAR4411Z)"
-    }
-]
+TRANCHES = []
+for t in SEED_DATA.get("tranches", []):
+    status = "RELEASED" if t.get("badge") == "RELEASED" else ("PENDING_VERIFICATION" if t.get("badge") == "CURRENT EARMARK" else "LOCKED")
+    TRANCHES.append({
+        "trancheId": t.get("trancheId"),
+        "name": t.get("name"),
+        "stage": t.get("stage"),
+        "percentage": t.get("percentage"),
+        "amountEth": t.get("amountEth"),
+        "amountUsd": t.get("amountUsd"),
+        "amountInr": t.get("amountInr"),
+        "status": status,
+        "description": t.get("description"),
+        "verifiedNullifier": t.get("verifiedNullifier"),
+        "verifiedMerkleRoot": t.get("verifiedMerkleRoot"),
+        "releasedAt": t.get("releasedAt"),
+        "txHash": t.get("txHash"),
+        "recipientVendor": t.get("recipientVendor")
+    })
+
+# Fallback if seed was empty
+if not TRANCHES:
+    TRANCHES = [
+        {
+            "trancheId": 1,
+            "name": "Tranche 1: Mobilization & Hydrogeological Survey",
+            "stage": "Mobilization",
+            "percentage": 20,
+            "amountEth": 10.0,
+            "amountUsd": 32000.0,
+            "amountInr": 2692800.0,
+            "status": "RELEASED",
+            "description": "Initial mobilization, hydro-geological mapping, and contractor site survey across 4 target village clusters.",
+            "verifiedNullifier": "0x88c1901f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e33e1",
+            "verifiedMerkleRoot": "0x856c30affcf0560c9a992bfbeb4f8691fd1cc00cc943390101fddcd734135370",
+            "releasedAt": "2026-10-24 14:20:00 UTC",
+            "txHash": "0x5e19f2bb0088aa9911cc22dd33445566778899aabbccddeeff00112233445566",
+            "recipientVendor": "Vidarbha Geological & Drilling Consultancy (GSTIN-27VWW001Z)"
+        },
+        {
+            "trancheId": 2,
+            "name": "Tranche 2: Heavy Material Sourcing & Borewell Casing Drilling",
+            "stage": "Material Sourcing",
+            "percentage": 30,
+            "amountEth": 15.0,
+            "amountUsd": 48000.0,
+            "amountInr": 4039200.0,
+            "status": "PENDING_VERIFICATION",
+            "description": "Procurement of 4x 5HP submersible pumps, 200m 150mm heavy PVC casing pipes, and drilling equipment.",
+            "verifiedNullifier": None,
+            "verifiedMerkleRoot": None,
+            "releasedAt": None,
+            "txHash": None,
+            "recipientVendor": "Maharashtra Borewell & PVC Supply Co. (GSTIN-27WATER9988Z)"
+        },
+        {
+            "trancheId": 3,
+            "name": "Tranche 3: Solar Pump & 5,000L Storage Installation",
+            "stage": "Installation",
+            "percentage": 30,
+            "amountEth": 15.0,
+            "amountUsd": 48000.0,
+            "amountInr": 4039200.0,
+            "status": "LOCKED",
+            "description": "Solar microgrid inverter connection, multi-stage water filtration, and 5000L HDPE clean water storage.",
+            "verifiedNullifier": None,
+            "verifiedMerkleRoot": None,
+            "releasedAt": None,
+            "txHash": None,
+            "recipientVendor": "Apex Green Solar & Clean Water Ltd (GSTIN-27SOLAR4411Z)"
+        },
+        {
+            "trancheId": 4,
+            "name": "Tranche 4: Commissioning, Fluoride Audit & Household Handover",
+            "stage": "Commissioning & Audit",
+            "percentage": 20,
+            "amountEth": 10.0,
+            "amountUsd": 32000.0,
+            "amountInr": 2692800.0,
+            "status": "LOCKED",
+            "description": "Water quality lab testing, fluoride reduction audit, grampanchayat handover to 142 rural households.",
+            "verifiedNullifier": None,
+            "verifiedMerkleRoot": None,
+            "releasedAt": None,
+            "txHash": None,
+            "recipientVendor": "Maharashtra Rural Health Care Trust (GSTIN-27MED1122Z)"
+        }
+    ]
 
 ACTIVITY_FEED = [
     {
@@ -129,6 +190,7 @@ ACTIVITY_FEED = [
 # ────────────────────────────────────────────────────────────
 @router.get("/state")
 def get_dashboard_state():
+    next_tranche = next((t for t in TRANCHES if t["status"] != "RELEASED"), None)
     return {
         "campaign": CAMPAIGN_STATE,
         "tranches": TRANCHES,
@@ -138,8 +200,8 @@ def get_dashboard_state():
             "releasedBalanceEth": CAMPAIGN_STATE["totalReleasedEth"],
             "releasedPercentage": round((CAMPAIGN_STATE["totalReleasedEth"] / CAMPAIGN_STATE["totalDepositedEth"]) * 100, 1),
             "status": "FROZEN" if CAMPAIGN_STATE["isFrozen"] else "ACTIVE",
-            "activeTrancheId": 2 if not CAMPAIGN_STATE["isFrozen"] else None,
-            "nextTrancheAmountEth": 20.0,
+            "activeTrancheId": next_tranche["trancheId"] if (next_tranche and not CAMPAIGN_STATE["isFrozen"]) else None,
+            "nextTrancheAmountEth": next_tranche["amountEth"] if next_tranche else 0.0,
             "contractAddress": CAMPAIGN_STATE["contractAddress"]
         }
     }
@@ -152,25 +214,29 @@ def lock_donation(
 ):
     CAMPAIGN_STATE["totalDepositedEth"] = amount_eth
     CAMPAIGN_STATE["totalReleasedEth"] = 0.0
+    CAMPAIGN_STATE["vaultBalanceEth"] = amount_eth
     CAMPAIGN_STATE["earmarkedPurpose"] = purpose
     CAMPAIGN_STATE["isFrozen"] = False
     CAMPAIGN_STATE["freezeReason"] = ""
     CAMPAIGN_STATE["currentTrancheIndex"] = 0
 
-    # Reset tranches
-    t1 = round(amount_eth * 0.20, 2)
-    t2 = round(amount_eth * 0.40, 2)
-    t3 = round(amount_eth - t1 - t2, 2)
-    
-    TRANCHES[0]["amountEth"] = t1
-    TRANCHES[0]["status"] = "PENDING_VERIFICATION"
-    TRANCHES[0]["releasedAt"] = None
-    TRANCHES[1]["amountEth"] = t2
-    TRANCHES[1]["status"] = "LOCKED"
-    TRANCHES[1]["releasedAt"] = None
-    TRANCHES[2]["amountEth"] = t3
-    TRANCHES[2]["status"] = "LOCKED"
-    TRANCHES[2]["releasedAt"] = None
+    # Reset tranches matching 20/30/30/20 standard schedule
+    t_splits = [0.20, 0.30, 0.30, 0.20]
+    eth_usd = float(SEED_DATA.get("financials", {}).get("exchangeRates", {}).get("ethUsd", 3200.0))
+    eth_inr = float(SEED_DATA.get("financials", {}).get("exchangeRates", {}).get("ethInr", 269280.0))
+
+    for i, pct in enumerate(t_splits):
+        amt_eth = round(amount_eth * pct, 2)
+        if i < len(TRANCHES):
+            TRANCHES[i]["amountEth"] = amt_eth
+            TRANCHES[i]["percentage"] = int(pct * 100)
+            TRANCHES[i]["amountUsd"] = round(amt_eth * eth_usd, 2)
+            TRANCHES[i]["amountInr"] = round(amt_eth * eth_inr, 2)
+            TRANCHES[i]["status"] = "PENDING_VERIFICATION" if i == 0 else "LOCKED"
+            TRANCHES[i]["releasedAt"] = None
+            TRANCHES[i]["verifiedNullifier"] = None
+            TRANCHES[i]["verifiedMerkleRoot"] = None
+            TRANCHES[i]["txHash"] = None
 
     tx_hash = "0x" + hashlib.sha256(f"DONATION_{time.time()}_{amount_eth}".encode()).hexdigest()
     CAMPAIGN_STATE["lastTxHash"] = tx_hash

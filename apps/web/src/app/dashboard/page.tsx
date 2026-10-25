@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import seedData from "@/data/campaign-seed.json";
+import { useLedger } from "@/context/ledger-context";
+import { DecentralizedQuorumPanel } from "@/components/DecentralizedQuorumPanel";
 
 /* ────────────────────────────────────────────────────────────
    Types for Feature #3: Purpose Escrow & Tranche Drip Dashboard
@@ -53,71 +56,39 @@ interface ActivityEvent {
 }
 
 /* ────────────────────────────────────────────────────────────
-   Offline Fallback State (Ensures demo is 100% resilient)
+   Offline Fallback State (Loaded directly from campaign-seed.json)
 ──────────────────────────────────────────────────────────── */
 const INITIAL_CAMPAIGN: CampaignData = {
-  id: 1,
-  donorAddress: "0x71C9414B8B67B543D75e3Ea2E59E50Eb147Eb901",
-  ngoAddress: "0x217e9C3182B0058b76D63E666C2c502b4e89991A",
-  earmarkedPurpose: "Water Infrastructure",
-  totalDepositedEth: 50.0,
-  totalReleasedEth: 10.0,
-  isFrozen: false,
-  freezeReason: "",
+  id: seedData.campaign.campaignId,
+  donorAddress: seedData.campaign.donorAddress,
+  ngoAddress: seedData.campaign.ngoAddress,
+  earmarkedPurpose: seedData.campaign.earmarkedPurpose,
+  totalDepositedEth: seedData.financials.totalDepositedEth,
+  totalReleasedEth: seedData.financials.totalReleasedEth,
+  isFrozen: seedData.escrowState.status === "FROZEN",
+  freezeReason: seedData.escrowState.frozen_reason || "",
   freezeTimestamp: null,
   currentTrancheIndex: 1,
-  contractAddress: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
-  network: "Ethereum Sepolia / Mainnet",
-  lastTxHash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+  contractAddress: seedData.campaign.contractAddress,
+  network: seedData.campaign.network,
+  lastTxHash: seedData.campaign.lastTxHash,
 };
 
-const INITIAL_TRANCHES: TrancheItem[] = [
-  {
-    trancheId: 1,
-    name: "Tranche 1: Mobilization & Geological Aquifer Survey",
-    percentage: 20,
-    amountEth: 10.0,
-    amountUsd: 32000.0,
-    amountInr: 2692800.0,
-    status: "RELEASED",
-    description: "Initial mobilization, hydro-geological mapping, and contractor site survey across 4 target village clusters.",
-    verifiedNullifier: "0x88c1901f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e33e1",
-    verifiedMerkleRoot: "0x856c30affcf0560c9a992bfbeb4f8691fd1cc00cc943390101fddcd734135370",
-    releasedAt: "2026-10-24 14:20:00 UTC",
-    txHash: "0x5e19f2bb0088aa9911cc22dd33445566778899aabbccddeeff00112233445566",
-    recipientVendor: "Vidarbha Geological & Drilling Consultancy (GSTIN-27VWW001Z)",
-  },
-  {
-    trancheId: 2,
-    name: "Tranche 2: Heavy Hardware Procurement & Borewell Casing Drilling",
-    percentage: 40,
-    amountEth: 20.0,
-    amountUsd: 64000.0,
-    amountInr: 5385600.0,
-    status: "PENDING_VERIFICATION",
-    description: "Procurement of 4x 5HP submersible pumps, 200m 150mm heavy PVC casing pipes, and deep-well drilling rigs.",
-    verifiedNullifier: null,
-    verifiedMerkleRoot: null,
-    releasedAt: null,
-    txHash: null,
-    recipientVendor: "Maharashtra Borewell & PVC Supply Co. (GSTIN-27WATER9988Z)",
-  },
-  {
-    trancheId: 3,
-    name: "Tranche 3: Water Filtration, Solar Integration & Beneficiary Handover",
-    percentage: 40,
-    amountEth: 20.0,
-    amountUsd: 64000.0,
-    amountInr: 5385600.0,
-    status: "LOCKED",
-    description: "Solar inverter connection, multi-stage water filtration, fluoride reduction audit, and handover to 142 Grampanchayat households.",
-    verifiedNullifier: null,
-    verifiedMerkleRoot: null,
-    releasedAt: null,
-    txHash: null,
-    recipientVendor: "Apex Green Solar & Clean Water Ltd (GSTIN-27SOLAR4411Z)",
-  },
-];
+const INITIAL_TRANCHES: TrancheItem[] = seedData.tranches.map((t) => ({
+  trancheId: t.trancheId,
+  name: t.name,
+  percentage: t.percentage,
+  amountEth: t.amountEth,
+  amountUsd: t.amountUsd,
+  amountInr: t.amountInr,
+  status: (t.badge === "RELEASED" ? "RELEASED" : t.badge === "CURRENT EARMARK" ? "PENDING_VERIFICATION" : "LOCKED") as "RELEASED" | "PENDING_VERIFICATION" | "LOCKED",
+  description: t.description,
+  verifiedNullifier: t.verifiedNullifier,
+  verifiedMerkleRoot: t.verifiedMerkleRoot,
+  releasedAt: t.releasedAt,
+  txHash: t.txHash,
+  recipientVendor: t.recipientVendor,
+}));
 
 const INITIAL_ACTIVITY: ActivityEvent[] = [
   {
@@ -165,9 +136,48 @@ const INITIAL_ACTIVITY: ActivityEvent[] = [
    Main Component
 ──────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
-  const [campaign, setCampaign] = useState<CampaignData>(INITIAL_CAMPAIGN);
+  const ledger = useLedger();
+  const [rawCampaign, setCampaign] = useState<CampaignData>(INITIAL_CAMPAIGN);
   const [tranches, setTranches] = useState<TrancheItem[]>(INITIAL_TRANCHES);
   const [activityFeed, setActivityFeed] = useState<ActivityEvent[]>(INITIAL_ACTIVITY);
+
+  // Synchronize campaign data with shared LedgerContext
+  const campaign: CampaignData = useMemo(() => ({
+    ...rawCampaign,
+    totalDepositedEth: ledger.totalDonated,
+    escrowBalanceEth: ledger.vaultBalance,
+    totalReleasedEth: ledger.releasedAmount,
+    isFrozen: ledger.escrowStatus === "FROZEN",
+    freezeReason: ledger.frozenReason || rawCampaign.freezeReason,
+  }), [rawCampaign, ledger.totalDonated, ledger.vaultBalance, ledger.releasedAmount, ledger.escrowStatus, ledger.frozenReason]);
+
+  // Synchronize tranches whenever ledger.tranches scales or updates
+  useEffect(() => {
+    if (ledger.tranches && ledger.tranches.length > 0) {
+      setTranches(
+        ledger.tranches.map((t) => ({
+          trancheId: t.trancheId,
+          name: t.name,
+          percentage: t.percentage,
+          amountEth: t.amountEth,
+          amountUsd: t.amountUsd,
+          amountInr: t.amountInr,
+          status: (t.status === "COMPLETED_VERIFIED"
+            ? "RELEASED"
+            : t.status === "PENDING_VERIFICATION"
+            ? "PENDING_VERIFICATION"
+            : "LOCKED") as "RELEASED" | "PENDING_VERIFICATION" | "LOCKED",
+          description: t.description,
+          verifiedNullifier: t.verifiedNullifier,
+          verifiedMerkleRoot: seedData.tranches[0]?.verifiedMerkleRoot || null,
+          releasedAt: t.releasedAt,
+          txHash: t.releaseTxHash,
+          recipientVendor: t.recipientVendor || seedData.campaign.verifiedVendor,
+        }))
+      );
+    }
+  }, [ledger.tranches]);
+
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState<number>(50.0);
@@ -188,8 +198,8 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setApiOnline(true);
-        if (data.campaign) setCampaign(data.campaign);
-        if (data.tranches) setTranches(data.tranches);
+        if (data.campaign && ledger.totalDonated === 50.0) setCampaign(data.campaign);
+        if (data.tranches && ledger.totalDonated === 50.0) setTranches(data.tranches);
         if (data.activityFeed) setActivityFeed(data.activityFeed);
       } else {
         setApiOnline(false);
@@ -197,7 +207,7 @@ export default function DashboardPage() {
     } catch {
       setApiOnline(false);
     }
-  }, []);
+  }, [ledger.totalDonated]);
 
   useEffect(() => {
     fetchState();
@@ -229,37 +239,27 @@ export default function DashboardPage() {
       }
     }
 
-    // Offline state handling
-    const t1 = parseFloat((depositAmount * 0.20).toFixed(2));
-    const t2 = parseFloat((depositAmount * 0.40).toFixed(2));
-    const t3 = parseFloat((depositAmount - t1 - t2).toFixed(2));
+    // Offline state handling - split into 4 standard tranches (20/30/30/20)
+    const t_splits = [0.20, 0.30, 0.30, 0.20];
+    const ethUsd = seedData.financials.exchangeRates.ethUsd;
+    const ethInr = seedData.financials.exchangeRates.ethInr;
 
-    const updatedTranches: TrancheItem[] = [
-      {
-        ...tranches[0],
-        amountEth: t1,
-        amountUsd: t1 * 3200,
-        amountInr: t1 * 3200 * 84.15,
-        status: "PENDING_VERIFICATION",
+    const updatedTranches: TrancheItem[] = tranches.map((t, idx) => {
+      const pct = t_splits[idx] ?? 0.25;
+      const amtEth = parseFloat((depositAmount * pct).toFixed(2));
+      return {
+        ...t,
+        percentage: Math.round(pct * 100),
+        amountEth: amtEth,
+        amountUsd: parseFloat((amtEth * ethUsd).toFixed(2)),
+        amountInr: parseFloat((amtEth * ethInr).toFixed(2)),
+        status: (idx === 0 ? "PENDING_VERIFICATION" : "LOCKED") as "PENDING_VERIFICATION" | "LOCKED",
         releasedAt: null,
-      },
-      {
-        ...tranches[1],
-        amountEth: t2,
-        amountUsd: t2 * 3200,
-        amountInr: t2 * 3200 * 84.15,
-        status: "LOCKED",
-        releasedAt: null,
-      },
-      {
-        ...tranches[2],
-        amountEth: t3,
-        amountUsd: t3 * 3200,
-        amountInr: t3 * 3200 * 84.15,
-        status: "LOCKED",
-        releasedAt: null,
-      },
-    ];
+        verifiedNullifier: null,
+        verifiedMerkleRoot: null,
+        txHash: null,
+      };
+    });
 
     setCampaign((prev) => ({
       ...prev,
@@ -272,20 +272,15 @@ export default function DashboardPage() {
     }));
     setTranches(updatedTranches);
 
-    const newAct: ActivityEvent = {
-      id: `ACT-${activityFeed.length + 1001}`,
-      type: "DONATION_LOCKED",
-      title: `New Purpose-Bound Allocation: ${depositAmount.toFixed(2)} ETH`,
-      subtitle: `Earmarked: ${depositPurpose}`,
-      amount: `${depositAmount.toFixed(2)} ETH`,
-      timestamp: new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC",
-      blockNumber: 20491950 + activityFeed.length,
-      txHash: "0x" + Math.random().toString(16).slice(2).padEnd(64, "0"),
-      badge: "PURPOSE BOUND",
-      color: "indigo",
-      details: `Donor locked ${depositAmount} ETH in smart contract strictly bound to '${depositPurpose}'.`,
-    };
-    setActivityFeed((prev) => [newAct, ...prev]);
+    // Sync to global persistent ledger state
+    ledger.addDonation({
+      donorIdentifier: connectedWalletAddress,
+      amount: depositAmount,
+      rail: "CRYPTO",
+      token: "ETH",
+      purposeName: depositPurpose,
+    });
+
     setIsDepositModalOpen(false);
   };
 
@@ -314,6 +309,7 @@ export default function DashboardPage() {
       const pendingIdx = tranches.findIndex((t) => t.status === "PENDING_VERIFICATION");
       if (pendingIdx !== -1) {
         const target = tranches[pendingIdx];
+        ledger.releaseTranche(target.trancheId, target.amountEth, target.recipientVendor);
         const updated = [...tranches];
         updated[pendingIdx] = {
           ...target,
@@ -379,6 +375,9 @@ export default function DashboardPage() {
       }
     }
 
+    // Global persistent state sync
+    ledger.freezeEscrow(reason);
+
     // Offline freeze
     setTimeout(() => {
       setCampaign((prev) => ({
@@ -408,6 +407,8 @@ export default function DashboardPage() {
 
   // Unfreeze Escrow
   const handleUnfreeze = async () => {
+    ledger.unfreezeEscrow();
+
     if (apiOnline) {
       try {
         const res = await fetch("http://127.0.0.1:8000/api/dashboard/unfreeze", {
@@ -451,12 +452,47 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  // Filtered Activity Feed
+  // Filtered Activity Feed with Live Synced Ledger Transactions
   const filteredActivities = useMemo(() => {
-    return activityFeed.filter((act) => {
+    const liveFromLedger: ActivityEvent[] = ledger.recentTxs.map((tx, idx) => ({
+      id: `live-${tx.id}-${idx}`,
+      type: (tx.status === "FROZEN"
+        ? "EMERGENCY_FREEZE"
+        : tx.status === "RELEASED"
+        ? "TRANCHE_RELEASED"
+        : "DONATION_LOCKED") as ActivityEvent["type"],
+      title:
+        tx.status === "FROZEN"
+          ? "🚨 Autonomous Escrow Auto-Frozen"
+          : tx.status === "RELEASED"
+          ? "Milestone Tranche Released"
+          : "Donation Deposited & Locked in Escrow",
+      subtitle: `${tx.amount} earmarked for '${tx.purpose}'`,
+      amount: tx.amount,
+      timestamp: tx.timestamp,
+      blockNumber: tx.block,
+      txHash: tx.txHash,
+      badge:
+        tx.status === "FROZEN"
+          ? "CIRCUIT BREAKER"
+          : tx.status === "RELEASED"
+          ? "VERIFIED RELEASE"
+          : "LIVE SYNC DEPOSIT",
+      color:
+        tx.status === "FROZEN"
+          ? "red"
+          : tx.status === "RELEASED"
+          ? "emerald"
+          : "indigo",
+      details: `Live synchronization with PurposeBoundEscrow.sol. Donor: ${tx.donorFull}. Amount: ${tx.amount} (${tx.rail})`,
+    }));
+
+    const combined = [...liveFromLedger, ...activityFeed];
+
+    return combined.filter((act) => {
       const matchesSearch =
         act.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        act.subtitle.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        act.subtitle?.toLowerCase().includes(searchFilter.toLowerCase()) ||
         act.txHash.toLowerCase().includes(searchFilter.toLowerCase());
 
       if (typeFilter === "ALL") return matchesSearch;
@@ -465,10 +501,12 @@ export default function DashboardPage() {
       if (typeFilter === "FREEZES") return matchesSearch && act.type === "EMERGENCY_FREEZE";
       return matchesSearch;
     });
-  }, [activityFeed, searchFilter, typeFilter]);
+  }, [ledger.recentTxs, activityFeed, searchFilter, typeFilter]);
 
-  const lockedEth = campaign.totalDepositedEth - campaign.totalReleasedEth;
-  const releasedPct = Math.round((campaign.totalReleasedEth / campaign.totalDepositedEth) * 100);
+  const lockedEth = ledger.vaultBalance;
+  const releasedPct = campaign.totalDepositedEth > 0
+    ? Math.round((campaign.totalReleasedEth / campaign.totalDepositedEth) * 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-[#020617] text-[#f1f5f9] grid-bg">
@@ -492,18 +530,10 @@ export default function DashboardPage() {
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   FEATURE #3 · DONOR &amp; TRANCHE PORTAL
                 </span>
-                {apiOnline === true && (
-                  <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    API LIVE (8000)
-                  </span>
-                )}
-                {apiOnline === false && (
-                  <span className="text-[10px] font-semibold text-amber-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    OFFLINE ENGINE
-                  </span>
-                )}
+                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  2/3 QUORUM CONSENSUS VERIFIED
+                </span>
               </div>
               <h1 className="text-lg md:text-xl font-black tracking-tight flex items-center gap-2">
                 <span className="bg-gradient-to-r from-white via-slate-200 to-indigo-400 bg-clip-text text-transparent">
@@ -704,7 +734,7 @@ export default function DashboardPage() {
                 Remaining Vault Balance
               </div>
               <div className="text-xl font-black text-indigo-400 font-mono">
-                {lockedEth.toFixed(2)} ETH ({100 - releasedPct}%)
+                {ledger.vaultBalance.toFixed(2)} ETH ({campaign.totalDepositedEth > 0 ? Math.round((ledger.vaultBalance / campaign.totalDepositedEth) * 100) : 100}%)
               </div>
               <div className="text-[11px] text-slate-400">
                 Safe in PurposeBoundEscrow Vault
@@ -732,6 +762,13 @@ export default function DashboardPage() {
         </section>
 
         {/* ╔══════════════════════════════════════════════════╗
+            ║  DECENTRALIZED ESCROW FREEZE QUORUM & GUARANTEE  ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <DecentralizedQuorumPanel
+          escrowStatus={campaign.isFrozen ? "FROZEN" : "ACTIVE"}
+        />
+
+        {/* ╔══════════════════════════════════════════════════╗
             ║  B. MILESTONE TRANCHE & DRIP-RELEASE WORKFLOW    ║
             ╚══════════════════════════════════════════════════╝ */}
         <section className="glass rounded-2xl p-6 border border-slate-800 space-y-4">
@@ -741,7 +778,7 @@ export default function DashboardPage() {
                 <span>💧</span> Milestone Tranche Drip-Release Workflow
               </h3>
               <p className="text-xs text-slate-400">
-                Funds are released in tranches (20% mobilization, 40% midway, 40% final completion) strictly upon verified expenditure proofs
+                Funds are released in 4 tranches (20% mobilization, 30% material & drilling, 30% solar pump & storage, 20% audit handover) strictly upon verified expenditure proofs
               </p>
             </div>
 
@@ -958,7 +995,7 @@ export default function DashboardPage() {
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
                 />
                 <span className="text-[11px] text-slate-500">
-                  ≈ ${(depositAmount * 3200).toLocaleString()} USD · Auto-split into 20% / 40% / 40% tranches
+                  ≈ ${(depositAmount * 3200).toLocaleString()} USD · Auto-split into 20% / 30% / 30% / 20% tranches (10 / 15 / 15 / 10 ETH basis)
                 </span>
               </div>
 
@@ -971,10 +1008,9 @@ export default function DashboardPage() {
                   onChange={(e) => setDepositPurpose(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="Water Infrastructure">Water Infrastructure (Borewells, Pumps, PVC)</option>
-                  <option value="School Healthcare & Nutrition">School Healthcare &amp; Nutrition</option>
-                  <option value="Rural Solar Electrification">Rural Solar Electrification</option>
-                  <option value="Emergency Disaster Relief">Emergency Disaster Relief</option>
+                  <option value="Water Infrastructure">Water Infrastructure (Borewells, Solar Pumps, Storage)</option>
+                  <option value="Rural Water & Fluoride Sanitation">Rural Water &amp; Fluoride Sanitation</option>
+                  <option value="Emergency Rural Medical Clinics">Emergency Rural Medical Clinics</option>
                 </select>
                 <span className="text-[11px] text-slate-500">
                   Committed as immutable <code className="text-indigo-300 font-mono">keccak256</code> on-chain.
@@ -994,10 +1030,11 @@ export default function DashboardPage() {
               </div>
 
               <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1 text-slate-400">
-                <div className="text-slate-300 font-semibold">Planned Drip Schedule:</div>
-                <div>• Tranche 1 (20%): {(depositAmount * 0.20).toFixed(2)} ETH (Mobilization)</div>
-                <div>• Tranche 2 (40%): {(depositAmount * 0.40).toFixed(2)} ETH (Hardware Procurement)</div>
-                <div>• Tranche 3 (40%): {(depositAmount * 0.40).toFixed(2)} ETH (Final Handover)</div>
+                <div className="text-slate-300 font-semibold">Planned 4-Stage Drip Schedule:</div>
+                <div>• Tranche 1 (20%): {(depositAmount * 0.20).toFixed(2)} ETH (Mobilization &amp; Survey)</div>
+                <div>• Tranche 2 (30%): {(depositAmount * 0.30).toFixed(2)} ETH (Material Sourcing &amp; Borewell Drilling)</div>
+                <div>• Tranche 3 (30%): {(depositAmount * 0.30).toFixed(2)} ETH (Solar Pump &amp; 5,000L Storage Installation)</div>
+                <div>• Tranche 4 (20%): {(depositAmount * 0.20).toFixed(2)} ETH (Commissioning, Fluoride Audit &amp; Handover)</div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

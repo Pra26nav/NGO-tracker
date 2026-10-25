@@ -125,21 +125,20 @@ GLOBAL_MERKLE_ROOT, GLOBAL_MERKLE_LEVELS = build_merkle_tree_from_hashes(ALL_LEA
 # ────────────────────────────────────────────────────────────
 # 5 Hops Master Data Generator
 # ────────────────────────────────────────────────────────────
-def build_dag_hops(is_skimming: bool = False) -> Dict[str, Any]:
-    # Baseline verified numbers
-    eth_deposit = 50.0
+def build_dag_hops(is_skimming: bool = False, eth_deposit: float = 50.0) -> Dict[str, Any]:
+    # Baseline verified numbers scaled by eth_deposit
     eth_usd_rate = 3200.00
-    usdc_gross = eth_deposit * eth_usd_rate  # $160,000.00
-    amm_fee_usd = 160.00  # 0.10% normal Uniswap v3 fee
-    usdc_received = usdc_gross - amm_fee_usd  # $159,840.00
+    usdc_gross = eth_deposit * eth_usd_rate
+    amm_fee_usd = usdc_gross * 0.001  # 0.10% normal Uniswap v3 fee
+    usdc_received = usdc_gross - amm_fee_usd
     
     usd_inr_rate = 84.15  # RBI / Forex rate
     
     if not is_skimming:
         # Legitimate Flow
-        bridge_fee_usd = 63.90  # 0.04% normal bridge gas
-        usdc_l2_received = usdc_received - bridge_fee_usd  # $159,776.10
-        inr_settled = usdc_l2_received * usd_inr_rate  # ₹1,34,45,158.82
+        bridge_fee_usd = min(63.90, round(usdc_received * 0.0004, 2))
+        usdc_l2_received = usdc_received - bridge_fee_usd
+        inr_settled = usdc_l2_received * usd_inr_rate
         
         hop3_status = "VERIFIED"
         hop3_discrepancy = None
@@ -149,28 +148,29 @@ def build_dag_hops(is_skimming: bool = False) -> Dict[str, Any]:
         slippage_detected_pct = 0.10
     else:
         # 14.8% Skimming Attack Simulated!
-        siphoned_usd = 23656.32  # 14.8% of $159,840
-        usdc_l2_received = usdc_received - siphoned_usd  # $136,183.68
-        inr_settled = usdc_l2_received * usd_inr_rate  # ₹1,14,59,856.67 (Massive ₹19.85 Lakh shortfall!)
+        siphoned_usd = round(usdc_received * 0.148, 2)
+        bridge_fee_usd = min(63.90, round(usdc_received * 0.0004, 2))
+        usdc_l2_received = usdc_received - siphoned_usd
+        inr_settled = usdc_l2_received * usd_inr_rate
         
         hop3_status = "FLAGGED_SKIMMING"
         hop3_shadow_wallet = {
             "address": "0x9b31De710F5D92186c3B5f80bF23a0740E7D6318",
             "label": "Undeclared Offshore Shadow Entity (Layering Wallet)",
-            "siphonedUsdc": 23656.32,
-            "siphonedInr": round(23656.32 * usd_inr_rate, 2),
+            "siphonedUsdc": siphoned_usd,
+            "siphonedInr": round(siphoned_usd * usd_inr_rate, 2),
             "siphonedPct": 14.80,
             "txHash": "0x3f9e8a002b11cd88a1e4599023ffaa12bb33445566778899aabbccddeeff0011",
             "destinationBank": "Cayman Island Commercial Trust - Acc #882104-B"
         }
         hop3_discrepancy = {
-            "expectedUsdc": 159840.00,
-            "reportedUsdc": 136183.68,
-            "discrepancyUsdc": 23656.32,
+            "expectedUsdc": round(usdc_received, 2),
+            "reportedUsdc": round(usdc_l2_received, 2),
+            "discrepancyUsdc": siphoned_usd,
             "discrepancyPct": 14.80,
             "allowedTolerancePct": 1.00,
             "ngoClaimedReason": "High L1-to-L2 congestion & bridge liquidity slippage (15.2% total)",
-            "oracleTruth": "Chainlink L1/L2 gas oracle proves actual bridge gas was $63.90 (0.04%). $23,656.32 was secretly split to shadow wallet!",
+            "oracleTruth": f"Chainlink L1/L2 gas oracle proves actual bridge gas was ${bridge_fee_usd:.2f} (0.04%). ${siphoned_usd:,.2f} was secretly split to shadow wallet!",
             "auditVerdict": "CRITICAL_FRAUD_DETECTED"
         }
         escrow_status = "FROZEN"
@@ -341,12 +341,12 @@ def build_dag_hops(is_skimming: bool = False) -> Dict[str, Any]:
 # Endpoints
 # ────────────────────────────────────────────────────────────
 @router.get("/dag-state")
-def get_dag_state(skimming: bool = False):
-    return build_dag_hops(is_skimming=skimming)
+def get_dag_state(skimming: bool = False, amount: float = 50.0):
+    return build_dag_hops(is_skimming=skimming, eth_deposit=amount)
 
 @router.post("/toggle-skimming")
-def toggle_skimming(simulate: bool = Form(...)):
-    return build_dag_hops(is_skimming=simulate)
+def toggle_skimming(simulate: bool = Form(...), amount: float = Form(50.0)):
+    return build_dag_hops(is_skimming=simulate, eth_deposit=amount)
 
 @router.get("/oracle-rates")
 def get_oracle_rates():

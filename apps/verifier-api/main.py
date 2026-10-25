@@ -1,12 +1,29 @@
 import io
 import base64
 import hashlib
+import os
+import json
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageChops, ImageEnhance, ImageDraw
 import imagehash
 import numpy as np
+
+def load_seed_json():
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "packages", "shared", "campaign-seed.json")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "src", "data", "campaign-seed.json")),
+        os.path.abspath("packages/shared/campaign-seed.json"),
+        os.path.abspath("apps/web/src/data/campaign-seed.json"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            with open(c, "r", encoding="utf-8") as f:
+                return json.load(f)
+    return {}
+
+SEED_DATA = load_seed_json()
 
 app = FastAPI(title="Black Hole Ledger - Forensic & Nullifier Engine")
 
@@ -142,11 +159,12 @@ def compute_real_ela_heatmap(img: Image.Image, quality: int = 85) -> tuple[float
 def seed_baseline():
     GLOBAL_NULLIFIER_REGISTRY.clear()
     GLOBAL_PHASH_REGISTRY.clear()
-    ESCROW_STATE["status"] = "ACTIVE"
-    ESCROW_STATE["balance_eth"] = 50.0
-    ESCROW_STATE["released_eth"] = 10.0
+    ESCROW_STATE["status"] = SEED_DATA.get("escrowState", {}).get("status", "ACTIVE")
+    ESCROW_STATE["balance_eth"] = float(SEED_DATA.get("financials", {}).get("totalDepositedEth", 50.0))
+    ESCROW_STATE["released_eth"] = float(SEED_DATA.get("financials", {}).get("totalReleasedEth", 10.0))
+    ESCROW_STATE["earmark"] = SEED_DATA.get("campaign", {}).get("earmark", "Water Infrastructure")
     ESCROW_STATE["frozen_reason"] = None
-    ESCROW_STATE["last_tx_hash"] = "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7"
+    ESCROW_STATE["last_tx_hash"] = SEED_DATA.get("campaign", {}).get("lastTxHash", "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7")
     seed_nullifier = generate_semantic_nullifier("GSTIN-27AAACW1234F1Z5", "INV-2026-8841", "2026-10-24", "45000")
     GLOBAL_NULLIFIER_REGISTRY[seed_nullifier] = "Donor_Pool_A (Clean Water Fund)"
 
@@ -173,7 +191,7 @@ def simulate_scenario(scenario: str = Form(...)):
             "INR 1,20,000",
             "Rameshwar Grampanchayat Ward 4"
         )
-        ESCROW_STATE["released_eth"] = 22.5
+        ESCROW_STATE["released_eth"] = 10.0
         return {
             "scenario": scenario,
             "escrowState": ESCROW_STATE,

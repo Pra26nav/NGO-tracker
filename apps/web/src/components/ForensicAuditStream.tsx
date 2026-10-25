@@ -157,7 +157,7 @@ export function translateLogToHuman(log: TerminalLog): PlainEnglishLog {
         icon: "🟢",
         category: "Autonomous Escrow Release",
         title: "Vendor Payment Safe Release",
-        explanation: "🟢 Automatically and safely released ₹3.1 Lakhs to the local hardware vendor.",
+        explanation: "🟢 Automatically and safely released Tranche 1 (10.0 ETH) to the verified vendor.",
         badgeColor: "emerald",
       };
     }
@@ -267,7 +267,7 @@ export function translateLogToHuman(log: TerminalLog): PlainEnglishLog {
       icon: "🎉",
       category: "Milestone Milestone Verified",
       title: "Milestone Confirmed On-Chain",
-      explanation: "ExpenditureVerified emitted on-chain. ₹3.1L disbursed safely to vendor; remaining donor funds stay safe.",
+      explanation: "ExpenditureVerified emitted on-chain. 10.0 ETH disbursed safely to vendor; remaining 40.0 ETH stays safe in vault.",
       badgeColor: "emerald",
     };
   }

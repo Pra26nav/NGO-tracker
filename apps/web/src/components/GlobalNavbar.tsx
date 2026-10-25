@@ -16,12 +16,15 @@ import {
   Lock,
 } from "lucide-react";
 
+import { useLedger } from "@/context/ledger-context";
+
 export function GlobalNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isFrozen, setIsFrozen] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
+  const { vaultBalance, escrowStatus } = useLedger();
 
   // Poll escrow state and health
   useEffect(() => {
@@ -53,14 +56,22 @@ export function GlobalNavbar() {
     }
   };
 
-  const navLinks = [
+  interface NavLinkItem {
+    href: string;
+    label: string;
+    icon: string;
+    description: string;
+    highlight?: boolean;
+    badge?: string;
+  }
+
+  const navLinks: NavLinkItem[] = [
+    { href: "/", label: "Attack Story", icon: "🚀", description: "20s Cinematic Demo", highlight: true, badge: "20s" },
     { href: "/red-team", label: "Red-Team", icon: "⚡", description: "Adversarial Stress Engine" },
     { href: "/flow-tracer", label: "Flow-Tracer", icon: "🌐", description: "5-Hop DAG & ZK Auditor" },
     { href: "/dashboard", label: "Dashboard", icon: "🏛️", description: "Escrow & Tranche Drip" },
-    { href: "/donate", label: "Donate", icon: "💳", description: "Crypto & Fiat UPI Gateway", badge: "NEW" },
-    { href: "/history", label: "History", icon: "📜", description: "Global Audit Ledger", badge: "NEW" },
-    { href: "/gallery", label: "Gallery", icon: "📸", description: "Geotagged Impact & ZK", badge: "NEW" },
-    { href: "/pitch", label: "Judge Demo", icon: "🎯", description: "1-Click Scenario Runner", highlight: true },
+    { href: "/donate", label: "Donate", icon: "💳", description: "Crypto & Fiat UPI Gateway" },
+    { href: "/pitch", label: "Judge Pitch", icon: "🎯", description: "Scenario Runner & Q&A" },
   ];
 
   return (
@@ -70,7 +81,7 @@ export function GlobalNavbar() {
           
           {/* Brand Logo & Title */}
           <div className="flex items-center gap-3 shrink-0">
-            <Link href="/pitch" className="flex items-center gap-2.5 group">
+            <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900 border border-indigo-500/30 group-hover:border-indigo-400 transition-all shadow-[0_0_12px_rgba(99,102,241,0.2)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="4" fill="#818cf8" />
@@ -118,9 +129,13 @@ export function GlobalNavbar() {
           <div className="flex items-center gap-2.5">
             {/* Status indicator */}
             <div className="hidden lg:flex items-center gap-2">
-              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 bg-emerald-950/70 text-emerald-400 border border-emerald-500/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>🟢 50.0 ETH LOCKED</span>
+              <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 ${
+                escrowStatus === "FROZEN"
+                  ? "bg-red-950/70 text-red-400 border border-red-500/40"
+                  : "bg-emerald-950/70 text-emerald-400 border border-emerald-500/40"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${escrowStatus === "FROZEN" ? "bg-red-400 animate-ping" : "bg-emerald-400 animate-pulse"}`} />
+                <span>{escrowStatus === "FROZEN" ? "🚨 ESCROW FROZEN" : `🟢 ${vaultBalance.toFixed(1)} ETH LOCKED`}</span>
               </span>
               
               {apiOnline === true && (

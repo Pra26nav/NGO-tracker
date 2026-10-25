@@ -276,7 +276,7 @@ def get_scenario_state(mode: str = Query("VALID_MILESTONE", description="Scenari
     if mode == "VALID_MILESTONE":
         status = "ACTIVE"
         frozen_reason = None
-        released_eth = 22.5
+        released_eth = 10.0
         badge_color = "emerald"
         action_title = "Water Infrastructure Milestone Proof Validated"
         action_summary = "Tranche 1 Released (10.0 ETH) · 142 Households Salted & Verified on Merkle Tree"

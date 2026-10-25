@@ -49,7 +49,7 @@ We require a disbursement mechanism that:
 * **Why rejected:** Humanitarian capital requires milestone delivery proofs, not arbitrary time progression.
 
 ### Alternative C: Milestone Tranche Drip Engine with Emergency Donor Killswitch
-* **Description:** Smart contract partitions balance into 20% / 40% / 40% tranches. Each tranche requires an on-chain `releaseNextTranche()` call referencing a verified expenditure nullifier and Merkle root. Donors possess an `emergencyFreeze()` killswitch with a dedicated unfreeze dispute mechanism.
+* **Description:** Smart contract partitions balance into 20% / 30% / 30% / 20% tranches (10 / 15 / 15 / 10 ETH basis). Each tranche requires an on-chain `releaseNextTranche()` call referencing a verified expenditure nullifier and Merkle root. Donors possess an `emergencyFreeze()` killswitch with a dedicated unfreeze dispute mechanism.
 * **Pros:** Optimal alignment of financial incentives; protects 80% of capital at inception; zero-latency emergency freeze; transparent audit stream.
 
 ---
@@ -77,9 +77,10 @@ struct Tranche {
 
 | Tranche | Phase Name | Percentage | Amount (50 ETH Basis) | Verification Prerequisite |
 |---|---|---|---|---|
-| **Tranche 1** | Mobilization & Site Survey | 20% | 10.0 ETH ($32,000) | Contractor agreement & hydro-geological survey |
-| **Tranche 2** | Hardware Procurement & Drilling | 40% | 20.0 ETH ($64,000) | Vendor invoice (`INV-2026-9001`), GSTIN check, ELA < 15.0 |
-| **Tranche 3** | Solar Power & 142 Household Handover | 40% | 20.0 ETH ($64,000) | 142 ZK-salted beneficiary signatures & water purity test |
+| **Tranche 1** | Mobilization & Hydrogeological Survey | 20% | 10.0 ETH ($32,000) | Contractor agreement & hydro-geological survey |
+| **Tranche 2** | Heavy Material Sourcing & Borewell Drilling | 30% | 15.0 ETH ($48,000) | Vendor invoice (`INV-2026-9001`), GSTIN check, ELA < 15.0 |
+| **Tranche 3** | Solar Pump & 5,000L Storage Installation | 30% | 15.0 ETH ($48,000) | Verified solar microgrid, filtration & storage install |
+| **Tranche 4** | Commissioning, Fluoride Audit & Handover | 20% | 10.0 ETH ($32,000) | 142 ZK-salted beneficiary signatures & fluoride reduction purity test |
 
 ### Emergency Freeze & Unfreeze Protocol
 

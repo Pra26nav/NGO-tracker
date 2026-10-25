@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import seedData from "@/data/campaign-seed.json";
+import { useLedger, LedgerTransaction } from "@/context/ledger-context";
 
 /* ────────────────────────────────────────────────────────────
    Types for Feature #2: Follow the Money DAG & ZK Auditor
@@ -151,50 +153,68 @@ function generateOfflineBeneficiaries(count = 142): Beneficiary[] {
 
 const STATIC_BENEFICIARIES = generateOfflineBeneficiaries(142);
 
-function getOfflineHops(isSkimming: boolean): DagHop[] {
-  const ethDeposit = 50.0;
-  const usdcGross = 160000.0;
-  const usdcReceived = 159840.0;
-  const usdInrRate = 84.15;
+function getOfflineHops(
+  isSkimming: boolean,
+  totalEth = seedData.financials.totalDepositedEth,
+  latestTx?: LedgerTransaction,
+  isFrozen = false,
+  vaultBalance = 40.0
+): DagHop[] {
+  const ethDeposit = totalEth;
+  const usdcGross = ethDeposit * 3200;
+  const usdcReceived = usdcGross * 0.999; // 0.10% normal Uniswap v3 fee
+  const usdInrRate = seedData.financials.exchangeRates.usdInr; // ₹84.15
 
-  const usdcL2 = isSkimming ? 136183.68 : 159776.10;
-  const inrSettled = isSkimming ? 11459856.67 : 13445158.82;
+  // Scale bridge gas & skimming proportionally
+  const bridgeFeeUsdc = Number((Math.min(63.90, usdcReceived * 0.0004)).toFixed(2));
+  const siphonedUsdc = isSkimming ? Number((usdcReceived * 0.148).toFixed(2)) : 0;
+  const siphonedInr = Number((siphonedUsdc * usdInrRate).toFixed(2));
+  const usdcL2 = isSkimming
+    ? Number((usdcReceived - siphonedUsdc).toFixed(2))
+    : Number((usdcReceived - bridgeFeeUsdc).toFixed(2));
+  const inrSettled = Number((usdcL2 * usdInrRate).toFixed(2));
+
+  // Hop 5 Tranche 1 release (20% of total deposit)
+  const tranche1Eth = Number((ethDeposit * 0.20).toFixed(4));
+  const tranche1Inr = Number((tranche1Eth * 3200 * usdInrRate).toFixed(2));
 
   return [
     {
       hopNumber: 1,
       id: "hop-1-deposit",
       title: "Inbound Earmarked Deposit",
-      subtitle: "50 ETH locked in PurposeBoundEscrow.sol",
-      status: "VERIFIED",
-      badge: "L1 SMART CONTRACT",
+      subtitle: latestTx
+        ? `Latest Inflow: ${latestTx.amount} (${latestTx.rail}) • ${ethDeposit.toFixed(2)} ETH in Escrow`
+        : `${ethDeposit.toFixed(2)} ETH locked in PurposeBoundEscrow.sol`,
+      status: isFrozen ? "FLAGGED_SKIMMING" : "VERIFIED",
+      badge: isFrozen ? "🚨 ESCROW FROZEN" : "L1 SMART CONTRACT",
       protocol: "Ethereum Mainnet (Sepolia/Mainnet)",
-      primaryValue: "50.00 ETH",
-      secondaryValue: "$160,000.00 USD eq.",
-      source: "Donor Sovereign Pool (0x71C...b901)",
+      primaryValue: `${ethDeposit.toFixed(2)} ETH`,
+      secondaryValue: `$${usdcGross.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD eq.`,
+      source: latestTx ? latestTx.donor : "Donor Sovereign Pool (0x71C...b901)",
       destination: "PurposeBoundEscrow.sol (0x3Af...56E1)",
-      txHash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
-      blockNumber: 20491823,
-      timestamp: "2026-10-25 09:30:14 UTC",
-      earmark: "Water Infrastructure",
+      txHash: latestTx ? latestTx.txHash : seedData.campaign.lastTxHash,
+      blockNumber: latestTx ? latestTx.block : 20491823,
+      timestamp: latestTx ? latestTx.timestamp : "2026-10-25 09:30:14 UTC",
+      earmark: seedData.campaign.earmark,
       proofDetails: [
         { label: "Smart Contract", value: "0x3Af19B02cD319985E1e012399F319114d5e56E1" },
         { label: "Earmark Condition", value: "Strict: Water Infrastructure Only" },
-        { label: "Immutable Balance", value: "50.0000 ETH" },
+        { label: "Vault Balance", value: `${vaultBalance.toFixed(2)} ETH` },
         { label: "Earmark Commitment", value: "0x4f8a91b2c3d4e5f6... (keccak256)" },
-        { label: "Audit Status", value: "Cryptographically Sealed & Active" },
+        { label: "Audit Status", value: isFrozen ? "Circuit Breaker Tripped • Frozen" : "Cryptographically Sealed & Active" },
       ],
     },
     {
       hopNumber: 2,
       id: "hop-2-swap",
       title: "DEX Stablecoin Swap",
-      subtitle: "50 ETH swapped to USDC via Uniswap v3",
+      subtitle: `${ethDeposit.toFixed(2)} ETH swapped to USDC via Uniswap v3`,
       status: "VERIFIED",
       badge: "AMM LIQUIDITY POOL",
       protocol: "Uniswap v3 (ETH/USDC 0.05% Pool)",
-      primaryValue: "159,840.00 USDC",
-      secondaryValue: "Swapped from 50.00 ETH",
+      primaryValue: `${usdcReceived.toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC`,
+      secondaryValue: `Swapped from ${ethDeposit.toFixed(2)} ETH`,
       source: "Escrow Liquidity Proxy (0x3Af...56E1)",
       destination: "Uniswap v3 Pool (0x88e6...4604)",
       txHash: "0x5e19f2bb0088aa9911cc22dd33445566778899aabbccddeeff00112233445566",
@@ -204,8 +224,8 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
       slippagePct: 0.1,
       proofDetails: [
         { label: "Chainlink Reference Price", value: "$3,200.00 / ETH (Feed: 0x5f4e...c030)" },
-        { label: "Expected Gross Output", value: "$160,000.00 USDC" },
-        { label: "Actual Received Output", value: "$159,840.00 USDC" },
+        { label: "Expected Gross Output", value: `$${usdcGross.toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC` },
+        { label: "Actual Received Output", value: `${usdcReceived.toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC` },
         { label: "Observed AMM Slippage", value: "0.10% (Within 1.0% Safe Threshold)" },
         { label: "Volatility Protection", value: "Locked into USDC Stablecoin" },
       ],
@@ -219,7 +239,7 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
       badge: isSkimming ? "🚨 SKIMMING FRAUD" : "CANONICAL BRIDGE",
       protocol: "Across / Polygon State Portal",
       primaryValue: `${usdcL2.toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC`,
-      secondaryValue: isSkimming ? "Down by $23,656.32 from Expected" : "Transferred via Bridge Relayer",
+      secondaryValue: isSkimming ? `Down by $${siphonedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 })} from Expected` : "Transferred via Bridge Relayer",
       source: "Ethereum L1 Bridge Vault (0x40ec...5001)",
       destination: isSkimming ? "Split: L2 NGO + Cayman Shadow Wallet" : "Polygon L2 NGO Disbursement (0x217e...991A)",
       txHash: isSkimming ? "0xdead00334499ff118822ee33aa44bb556677889900112233445566778899aabb" : "0x9c00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -228,25 +248,25 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
       shadowWallet: isSkimming ? {
         address: "0x9b31De710F5D92186c3B5f80bF23a0740E7D6318",
         label: "Undeclared Offshore Shadow Entity (Layering Wallet)",
-        siphonedUsdc: 23656.32,
-        siphonedInr: 1990679.33,
+        siphonedUsdc: siphonedUsdc,
+        siphonedInr: siphonedInr,
         siphonedPct: 14.80,
         txHash: "0x3f9e8a002b11cd88a1e4599023ffaa12bb33445566778899aabbccddeeff0011",
         destinationBank: "Cayman Island Commercial Trust - Acc #882104-B"
       } : null,
       discrepancy: isSkimming ? {
-        expectedUsdc: 159840.00,
-        reportedUsdc: 136183.68,
-        discrepancyUsdc: 23656.32,
+        expectedUsdc: Number(usdcReceived.toFixed(2)),
+        reportedUsdc: usdcL2,
+        discrepancyUsdc: siphonedUsdc,
         discrepancyPct: 14.80,
         allowedTolerancePct: 1.00,
         ngoClaimedReason: "High L1-to-L2 congestion & bridge liquidity slippage (15.2% total)",
-        oracleTruth: "Chainlink L1/L2 gas oracle proves actual bridge gas was $63.90 (0.04%). $23,656.32 was secretly split to shadow wallet!",
+        oracleTruth: `Chainlink L1/L2 gas oracle proves actual bridge gas was $${bridgeFeeUsdc} (0.04%). $${siphonedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 })} was secretly split to shadow wallet!`,
         auditVerdict: "CRITICAL_FRAUD_DETECTED"
       } : null,
       proofDetails: [
         { label: "Bridge Protocol", value: "Polygon State Sync / L1 Bridge Vault" },
-        { label: "Gas & Relayer Fee", value: "$63.90 USDC (Chainlink L2 Gas Oracle)" },
+        { label: "Gas & Relayer Fee", value: `$${bridgeFeeUsdc} USDC (Chainlink L2 Gas Oracle)` },
         { label: "L1 Confirmed Blocks", value: "64 Finalized Blocks" },
         { label: "L2 State Root Proof", value: "0x77ba9012cd34...fe91" },
         { label: "Forensic Bridge Check", value: isSkimming ? "FAILED — Skimming Discrepancy > 1%" : "PASSED — Zero Slippage Skimming" },
@@ -273,19 +293,19 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
         { label: "Off-Ramp Provider", value: "Licensed Banking Gateway (KYB Verified)" },
         { label: "Bank Credit Reference", value: "NEFT-HDFC-20261025-449102" },
         { label: "Disbursement Account", value: "HDFC Current Acc #502000881920" },
-        { label: "Reconciliation Audit", value: isSkimming ? "DEFICIT: ₹19,90,680 Missing!" : "100% Reconciled to Penny" },
+        { label: "Reconciliation Audit", value: isSkimming ? `DEFICIT: ₹${siphonedInr.toLocaleString("en-IN", { maximumFractionDigits: 0 })} Missing!` : "100% Reconciled to Penny" },
       ],
     },
     {
       hopNumber: 5,
       id: "hop-5-vendor",
       title: "Verified Vendor Payout & Impact Proof",
-      subtitle: "Tranche 1 paid to Borewell Vendor + 142 Households",
+      subtitle: `Tranche 1 (${tranche1Eth.toFixed(2)} ETH · 20%) paid to Borewell Vendor + 142 Households`,
       status: isSkimming ? "FROZEN_TRUNCATED" : "VERIFIED",
       badge: "VERIFIED PHYSICAL IMPACT",
       protocol: "HDFC Bank NEFT / Smart Contract Tranche 1",
-      primaryValue: "₹1,20,000.00 INR",
-      secondaryValue: "4x Borewells + 142 Household Beneficiaries",
+      primaryValue: `₹${tranche1Inr.toLocaleString("en-IN", { minimumFractionDigits: 2 })} INR`,
+      secondaryValue: `Tranche 1 (20% · ${tranche1Eth.toFixed(2)} ETH eq.) · 142 Household Beneficiaries`,
       source: "NGO Local Operations Acc #502000881920",
       destination: "Maharashtra Borewell & PVC Supply Co.",
       txHash: "0x112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00",
@@ -299,6 +319,7 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
         { label: "Hardware Vendor", value: "Maharashtra Borewell & PVC Supply Co." },
         { label: "Vendor GSTIN", value: "GSTIN-27WATER9988Z" },
         { label: "Bank Transfer UTR", value: "UTR-HDFC-20261025-00918234" },
+        { label: "Disbursed Amount", value: `₹${tranche1Inr.toLocaleString("en-IN", { minimumFractionDigits: 2 })} (~${tranche1Eth.toFixed(2)} ETH eq.)` },
         { label: "GPS Coordinates", value: "19.8762° N, 75.3433° E (Ward 4)" },
         { label: "ZK Merkle Commitment", value: GLOBAL_ROOT_CONSTANT.slice(0, 22) + "..." },
         { label: "Beneficiary Redaction", value: "142 Households Cryptographically Proven (0 PII Leaked)" },
@@ -311,10 +332,29 @@ function getOfflineHops(isSkimming: boolean): DagHop[] {
    Main Component
 ──────────────────────────────────────────────────────────── */
 export default function FlowTracerPage() {
+  const ledger = useLedger();
   const [isSkimmingSimulated, setIsSkimmingSimulated] = useState(false);
   const [selectedHopNumber, setSelectedHopNumber] = useState<number>(3); // Default to Hop 3 to inspect bridge/skimming
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
-  const [hops, setHops] = useState<DagHop[]>(() => getOfflineHops(false));
+
+  // Dynamically compute hops from shared LedgerContext
+  const dynamicHops = useMemo(() => {
+    return getOfflineHops(
+      isSkimmingSimulated,
+      ledger.totalDonated,
+      ledger.recentTxs[0],
+      ledger.escrowStatus === "FROZEN",
+      ledger.vaultBalance
+    );
+  }, [
+    isSkimmingSimulated,
+    ledger.totalDonated,
+    ledger.recentTxs,
+    ledger.escrowStatus,
+    ledger.vaultBalance,
+  ]);
+
+  const hops = dynamicHops;
   const [publicLeaves, setPublicLeaves] = useState<PublicLeaf[]>(FALLBACK_PUBLIC_LEAVES);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(STATIC_BENEFICIARIES);
   const [selectedBeneficiaryIndex, setSelectedBeneficiaryIndex] = useState<number>(0);
@@ -331,11 +371,7 @@ export default function FlowTracerPage() {
       try {
         const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/dag-state");
         if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setApiOnline(true);
-            setHops(data.hops);
-          }
+          if (isMounted) setApiOnline(true);
         } else {
           if (isMounted) setApiOnline(false);
         }
@@ -369,24 +405,10 @@ export default function FlowTracerPage() {
   }, []);
 
   // Toggle Skimming Simulation
-  const handleToggleSkimming = useCallback(async (sim: boolean) => {
+  const handleToggleSkimming = useCallback((sim: boolean) => {
     setIsSkimmingSimulated(sim);
     setSelectedHopNumber(3); // Auto-focus on Hop 3
-
-    if (apiOnline) {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/api/flow-tracer/dag-state?skimming=${sim}`);
-        if (res.ok) {
-          const data = await res.json();
-          setHops(data.hops);
-          return;
-        }
-      } catch {
-        // fallback
-      }
-    }
-    setHops(getOfflineHops(sim));
-  }, [apiOnline]);
+  }, []);
 
   // Handle Verify ZK Merkle Proof for Selected Beneficiary
   const handleVerifyZkProof = useCallback(async (index: number) => {
@@ -457,6 +479,10 @@ export default function FlowTracerPage() {
   const selectedHop = useMemo(() => {
     return hops.find((h) => h.hopNumber === selectedHopNumber) || hops[0];
   }, [hops, selectedHopNumber]);
+
+  const hop3 = useMemo(() => {
+    return hops.find((h) => h.hopNumber === 3) || hops[2];
+  }, [hops]);
 
   const filteredBeneficiaries = useMemo(() => {
     if (!searchBeneficiary.trim()) return beneficiaries;
@@ -568,7 +594,7 @@ export default function FlowTracerPage() {
                       isSkimmingSimulated ? "bg-red-400 animate-ping" : "bg-emerald-400"
                     }`}
                   ></span>
-                  <span>{isSkimmingSimulated ? "🔒 ESCROW FROZEN · AUDIT BREACH" : "🟢 ESCROW ACTIVE · 50.00 ETH LOCKED"}</span>
+                  <span>{isSkimmingSimulated ? "🔒 ESCROW FROZEN · AUDIT BREACH" : `🟢 ESCROW ACTIVE · ${ledger.totalDonated.toFixed(2)} ETH LOCKED`}</span>
                 </span>
 
                 <span className="text-xs font-mono text-slate-400">
@@ -577,7 +603,7 @@ export default function FlowTracerPage() {
               </div>
 
               <div className="flex flex-wrap items-baseline gap-3">
-                <div className="text-2xl font-black text-white">50.00 ETH Locked</div>
+                <div className="text-2xl font-black text-white">{ledger.totalDonated.toFixed(2)} ETH Locked</div>
                 <div className="text-sm text-slate-400">
                   Strict Smart Contract Earmark:{" "}
                   <span className="text-emerald-400 font-semibold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
@@ -585,7 +611,7 @@ export default function FlowTracerPage() {
                   </span>
                 </div>
                 <div className="text-xs font-mono text-slate-500">
-                  Reference: ₹1,34,50,536 INR ($160,000 USD)
+                  Reference: ₹{(ledger.totalDonated * 3200 * 84.15).toLocaleString("en-IN", { maximumFractionDigits: 0 })} INR (${(ledger.totalDonated * 3200).toLocaleString("en-US", { minimumFractionDigits: 2 })} USD)
                 </div>
               </div>
 
@@ -594,7 +620,7 @@ export default function FlowTracerPage() {
                   <span className="text-base">⚠️</span>
                   <div>
                     <span className="font-bold">CRITICAL FRAUD ALERT (Hop #3):</span> 14.8% Bridge Slippage
-                    Skimming detected! $23,656.32 (~₹19,90,680) was diverted to undeclared Cayman shadow wallet{" "}
+                    Skimming detected! ${hop3?.shadowWallet ? hop3.shadowWallet.siphonedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999 * 0.148).toFixed(2)} (~₹{hop3?.shadowWallet ? hop3.shadowWallet.siphonedInr.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : (ledger.totalDonated * 3200 * 0.999 * 0.148 * 84.15).toFixed(0)}) was diverted to undeclared Cayman shadow wallet{" "}
                     <code className="text-red-200 bg-red-900/60 px-1 py-0.5 rounded">0x9b31...6318</code>. The
                     remaining escrow has been <strong>auto-frozen on-chain</strong> to prevent further leakage.
                   </div>
@@ -796,15 +822,15 @@ export default function FlowTracerPage() {
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between">
                         <span className="text-slate-400">Expected Output (Chainlink):</span>
-                        <span className="font-mono text-emerald-400 font-bold">$159,840.00 USDC</span>
+                        <span className="font-mono text-emerald-400 font-bold">${hop3?.discrepancy ? hop3.discrepancy.expectedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999).toFixed(2)} USDC</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Reported Output by NGO:</span>
-                        <span className="font-mono text-red-400 font-bold">$136,183.68 USDC</span>
+                        <span className="font-mono text-red-400 font-bold">${hop3?.discrepancy ? hop3.discrepancy.reportedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999 * 0.852).toFixed(2)} USDC</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Unexplained Discrepancy:</span>
-                        <span className="font-mono text-red-300 font-black">-$23,656.32 (-14.80%)</span>
+                        <span className="font-mono text-red-300 font-black">-${hop3?.discrepancy ? hop3.discrepancy.discrepancyUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999 * 0.148).toFixed(2)} (-14.80%)</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Allowed Slippage Tolerance:</span>
@@ -812,7 +838,7 @@ export default function FlowTracerPage() {
                       </div>
                       <div className="flex justify-between pt-1 border-t border-slate-800">
                         <span className="text-slate-400">Local Currency Deficit:</span>
-                        <span className="font-mono text-amber-400 font-bold">₹19,90,680.00 INR Missing</span>
+                        <span className="font-mono text-amber-400 font-bold">₹{hop3?.shadowWallet ? hop3.shadowWallet.siphonedInr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999 * 0.148 * 84.15).toFixed(2)} INR Missing</span>
                       </div>
                     </div>
                   </div>
@@ -860,7 +886,7 @@ export default function FlowTracerPage() {
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <div>
                           <div className="text-[10px] text-slate-500">Siphoned USDC:</div>
-                          <div className="font-mono text-red-400 font-bold">$23,656.32</div>
+                          <div className="font-mono text-red-400 font-bold">${hop3?.shadowWallet ? hop3.shadowWallet.siphonedUsdc.toLocaleString("en-US", { minimumFractionDigits: 2 }) : (ledger.totalDonated * 3200 * 0.999 * 0.148).toFixed(2)}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-slate-500">Offshore Entity:</div>

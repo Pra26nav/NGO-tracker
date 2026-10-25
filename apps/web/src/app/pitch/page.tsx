@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import seedData from "@/data/campaign-seed.json";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert,
@@ -167,11 +168,11 @@ const OFFLINE_SCENARIOS: Record<string, {
     frozenReason: null,
     actionTitle: "Water Infrastructure Milestone Proof Validated",
     actionSummary: "Tranche 1 Released (10.0 ETH) · 142 Households Salted & Verified on Merkle Tree",
-    totalDepositedEth: 50.0,
-    totalReleasedEth: 22.5,
-    remainingEth: 27.5,
+    totalDepositedEth: seedData.financials.totalDepositedEth,
+    totalReleasedEth: seedData.financials.totalReleasedEth,
+    remainingEth: seedData.financials.vaultBalanceEth,
     badgeColor: "emerald",
-    lastTxHash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+    lastTxHash: seedData.campaign.lastTxHash,
     terminalLogs: [
       { time: "[+00:01.017s]", level: "INFO", source: "INGEST", text: "Ingesting expenditure proof for Milestone #1 (Water Infrastructure)..." },
       { time: "[+00:03.051s]", level: "INFO", source: "OCR_PARSE", text: "Extracted facts: Vendor=GSTIN-27WATER9988Z, Inv=INV-2026-9001, Amount=₹1,20,000, Date=2026-10-25" },

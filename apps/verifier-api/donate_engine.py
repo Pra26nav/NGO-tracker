@@ -13,10 +13,10 @@ router = APIRouter(prefix="/api/donate", tags=["donate"])
 SUPPORTED_PURPOSES = [
     {
         "id": "water-wardha",
-        "name": "Water Infrastructure - Wardha Cluster",
-        "description": "Deep-well borewells, solar pumps, and 5000L HDPE tanks for 142 drought-affected rural households.",
+        "name": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "description": "Direct-impact escrow for hydrogeological survey, deep borewell drilling, solar submersible pumps, and 5,000L potable storage systems across 142 drought-affected rural households in the Maharashtra cluster.",
         "targetEth": 50.0,
-        "raisedEth": 42.5,
+        "raisedEth": 50.0,
         "category": "Water Infrastructure",
         "verifiedVendor": "Vidarbha Geological & Drilling Consultancy (GSTIN-27VWW001Z)",
         "keccak256Commitment": "0x4f8a91b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e"
@@ -53,7 +53,7 @@ RECENT_DONATIONS = [
         "amountInr": "₹1,34,64,000",
         "rail": "CRYPTO",
         "token": "ETH",
-        "purpose": "Water Infrastructure - Wardha Cluster",
+        "purpose": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
         "txHash": "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
         "status": "LOCKED_IN_ESCROW",
         "timestamp": "2026-10-24 10:15:00 UTC",
