@@ -613,7 +613,7 @@ export default function DonatePage() {
         donorIdentifier: isCrypto && web3.isConnected ? connectedAddress : donorId,
         donorName: isVolunteer ? volName : donorName,
         amount: isVolunteer ? 0.0 : depositAmount,
-        rail: isVolunteer ? "VOLUNTEER_HOURS" : isNonCash ? "IN_KIND_LOGISTICS" : isCrypto ? "CRYPTO" : "UPI",
+        rail: isVolunteer ? "VOLUNTEER_SERVICE" : isNonCash ? "IN_KIND_LOGISTICS" : isCrypto ? "CRYPTO" : "UPI",
         token: tokenSymbol,
         purposeName: ACTIVE_CAMPAIGN.name,
         utrNumber: utrGen,

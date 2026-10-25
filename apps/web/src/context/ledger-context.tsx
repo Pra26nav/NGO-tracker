@@ -68,6 +68,9 @@ export interface VolunteerServiceRecord {
   estimatedValue: number;
   estimatedValueCurrency: string;
   hourlyRateEstimate?: number;
+  estimatedHourlyRateInr?: number;
+  estimatedTotalValueInr?: number;
+  estimatedTotalValueUsd?: number;
   purposeId: string;
   purposeName: string;
   date: string;
@@ -175,8 +178,12 @@ export interface LedgerContextValue {
     status?: VolunteerServiceStatus;
     volunteerRef?: string;
     hourlyRateEstimate?: number;
+    estimatedHourlyRateInr?: number;
     estimatedValue?: number;
+    estimatedTotalValueInr?: number;
+    estimatedTotalValueUsd?: number;
     purposeId?: string;
+    purposeName?: string;
     notes?: string;
   }) => Promise<VolunteerServiceRecord>;
 }
@@ -703,8 +710,12 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     status?: VolunteerServiceStatus;
     volunteerRef?: string;
     hourlyRateEstimate?: number;
+    estimatedHourlyRateInr?: number;
     estimatedValue?: number;
+    estimatedTotalValueInr?: number;
+    estimatedTotalValueUsd?: number;
     purposeId?: string;
+    purposeName?: string;
     notes?: string;
   }): Promise<VolunteerServiceRecord> => {
     try {
@@ -729,8 +740,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
 
     const volId = `VOL-${Date.now().toString().slice(-3)}`;
     const randomHex = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    const hourlyRate = record.hourlyRateEstimate || (record.category === "Teaching" ? 3000 : 5000);
-    const estVal = record.estimatedValue || (record.hours * hourlyRate);
+    const hourlyRate = record.hourlyRateEstimate || record.estimatedHourlyRateInr || (record.category === "Teaching" ? 3000 : 5000);
+    const estVal = record.estimatedValue || record.estimatedTotalValueInr || (record.hours * hourlyRate);
 
     const newRec: VolunteerServiceRecord = {
       id: volId,
@@ -742,7 +753,10 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
       sessions: record.sessions || 1,
       status: record.status || "COMPLETED",
       hourlyRateEstimate: hourlyRate,
+      estimatedHourlyRateInr: hourlyRate,
       estimatedValue: estVal,
+      estimatedTotalValueInr: estVal,
+      estimatedTotalValueUsd: record.estimatedTotalValueUsd || Math.round(estVal / 84.15),
       estimatedValueCurrency: "INR",
       purposeId: record.purposeId || "water-wardha",
       purposeName: seedData.campaign.name,
