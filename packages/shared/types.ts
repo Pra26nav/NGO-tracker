@@ -105,3 +105,275 @@ export interface CampaignSeedData {
   escrowState: EscrowState;
   tranches: MilestoneTranche[];
 }
+
+/* ────────────────────────────────────────────────────────────
+   Augmented Target Architecture Types (Research Integrated)
+──────────────────────────────────────────────────────────── */
+
+export type FundFlowEventType =
+  | "DONATION"
+  | "ALLOCATION"
+  | "TRANSFER"
+  | "SWAP"
+  | "BRIDGE"
+  | "DEPOSIT"
+  | "WITHDRAWAL"
+  | "OFFRAMP"
+  | "FIAT_PAYMENT"
+  | "EXPENDITURE";
+
+export interface FundFlowEvent {
+  id: string;
+  campaignId?: string | number;
+  allocationId?: string;
+  chain?: string;
+  transactionHash?: string;
+  blockNumber?: bigint | number;
+  timestamp: string;
+  from?: string;
+  to?: string;
+  asset: string;
+  amount: string | number;
+  amountUsd?: number;
+  amountInr?: number;
+  eventType: FundFlowEventType;
+  parentEventIds: string[];
+  provenanceWeight?: number; // 0.0 to 1.0 (Proportional haircut ratio)
+  evidenceRefs: string[];
+  confidence: number; // 0.0 to 1.0
+  metadata?: Record<string, any>;
+}
+
+export type FundNodeType =
+  | "DONATION"
+  | "WALLET"
+  | "TOKEN"
+  | "TRANSACTION"
+  | "SWAP"
+  | "BRIDGE"
+  | "CHAIN"
+  | "EXCHANGE"
+  | "OFF_RAMP"
+  | "FIAT_ACCOUNT"
+  | "VENDOR"
+  | "EXPENDITURE"
+  | "EVIDENCE"
+  | "ALLOCATION"
+  | "CAMPAIGN"
+  | "MILESTONE"
+  | "IMPACT"
+  | "ATTESTATION";
+
+export type FundEdgeType =
+  | "FUNDED"
+  | "TRANSFERRED"
+  | "SWAPPED"
+  | "BRIDGED"
+  | "DEPOSITED"
+  | "WITHDRAWN"
+  | "CONVERTED"
+  | "PAID"
+  | "ALLOCATED"
+  | "SUPPORTED_BY"
+  | "ATTESTED_BY"
+  | "CLAIMED_AS"
+  | "DUPLICATES";
+
+export interface FundNode {
+  id: string;
+  type: FundNodeType;
+  label: string;
+  source: string;
+  timestamp: string;
+  chain?: string;
+  transactionHash?: string;
+  amount?: number;
+  asset?: string;
+  confidence: number;
+  evidence?: string[];
+  provenance?: number;
+  status?: string;
+  details?: Record<string, any>;
+}
+
+export interface FundEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: FundEdgeType;
+  amount?: number;
+  asset?: string;
+  timestamp: string;
+  chain?: string;
+  transactionHash?: string;
+  provenanceWeight: number; // Proportional attribution fraction (0.0 to 1.0)
+  confidence: number;
+  isFlagged?: boolean;
+  flagReason?: string;
+}
+
+export interface FundGraphData {
+  nodes: FundNode[];
+  edges: FundEdge[];
+  summary: {
+    totalDonatedEth: number;
+    totalTrackedEth: number;
+    provenanceRatio: number;
+    activeHops: number;
+    discrepanciesCount: number;
+  };
+}
+
+export interface CanonicalExpenditureIdentity {
+  vendorTaxId: string;
+  invoiceNumber: string;
+  invoiceDate: string; // ISO-8601 (YYYY-MM-DD)
+  amount: string;
+  currency: string;
+  category: string;
+  project?: string;
+  location?: string;
+  canonicalString: string;
+  rawDocumentHash: string; // SHA-256 of original file bytes
+  canonicalEvidenceHash: string; // Hash of normalized semantic JSON
+}
+
+export interface ExpenditureNullifier {
+  nullifier: string; // 32-byte hex string
+  domainSeparator: "BHL_EXPENDITURE_NULLIFIER_V1";
+  canonicalIdentityHash: string;
+  campaignId: number;
+  allocationId?: string;
+  timestamp: number;
+  isRegistered: boolean;
+  registeredTxHash?: string;
+}
+
+export interface ZKProofPublicInputs {
+  evidenceCommitment: string;
+  allocationId: string;
+  categoryCommitment: string;
+  maximumAuthorizedAmount: string;
+  vendorCommitment: string;
+  nullifier: string;
+  campaignId: number;
+}
+
+export interface ZKExpenditureProof {
+  proofId: string;
+  publicInputs: ZKProofPublicInputs;
+  proofBytes: string;
+  verdict: "VERIFIED" | "REJECTED";
+  constraintsVerified: {
+    evidenceCommitmentValid: boolean;
+    categoryAuthorized: boolean;
+    amountWithinLimit: boolean;
+    vendorAuthorized: boolean;
+    nullifierValid: boolean;
+    piiShieldZeroLeakage: boolean;
+  };
+  proverTimeMs: number;
+  verifierTimeMs: number;
+}
+
+export interface VerifiableCredential {
+  "@context": string[];
+  id: string;
+  type: string[];
+  issuer: string; // DID: did:bhl:...
+  issuanceDate: string;
+  expirationDate?: string;
+  credentialSubject: {
+    id: string; // DID
+    [key: string]: any;
+  };
+  proof: {
+    type: string;
+    created: string;
+    verificationMethod: string;
+    proofPurpose: string;
+    jws?: string;
+    signatureValue?: string;
+  };
+}
+
+export interface CharityRegistryRecord {
+  taxId: string;
+  legalName: string;
+  country: string;
+  jurisdiction: string;
+  registrySource: "IRS_990" | "UK_CHARITY_COMMISSION" | "INDIA_DARPAN_80G" | "IATI";
+  registrationNumber: string;
+  status: "ACTIVE" | "REVOKED" | "SUSPENDED" | "UNDER_REVIEW";
+  fetchedAt: string;
+  documentHash: string;
+  confidenceScore: number;
+  totalRevenueUsd: number;
+  programExpenseRatio: number;
+  adminExpenseRatio: number;
+  executiveCompensationUsd: number;
+  riskIndicators: string[];
+  aliases: string[];
+}
+
+export interface EntityResolutionResult {
+  queryTerm: string;
+  matchedEntityId: string;
+  matchedLegalName: string;
+  confidence: number; // 0.00 to 1.00
+  matchMethod: "EXACT_TAX_ID" | "EXACT_NAME" | "FUZZY_LEVENSHTEIN" | "ALIAS_DICTIONARY";
+  registrySource: string;
+  isVerified: boolean;
+}
+
+export interface DiscrepancyRuleResult {
+  ruleId: string;
+  domain: "CRYPTOGRAPHIC" | "FINANCIAL" | "CATEGORY" | "TEMPORAL" | "PROVENANCE" | "REPORTING";
+  severity: "CRITICAL_FREEZE" | "WARNING_REVIEW" | "INFO";
+  title: string;
+  description: string;
+  offendingEntity?: string;
+  offendingNullifier?: string;
+  expectedValue?: string | number;
+  observedValue?: string | number;
+  actionTaken: "AUTONOMOUS_FREEZE" | "AUDIT_FLAG" | "PASS";
+  timestamp: string;
+}
+
+export interface AdversarialSimulationItem {
+  id: string;
+  receiptNumber: string;
+  vendorName: string;
+  taxId: string;
+  amount: number;
+  category: string;
+  groundTruthType: "LEGITIMATE" | "FORGED" | "DUPLICATE" | "MODIFIED_DUPLICATE";
+  detectedVerdict: "VERIFIED" | "FORGERY_DETECTED" | "DUPLICATE_NULLIFIER" | "CATEGORY_MISMATCH";
+  elaScore: number;
+  phashHammingDistance: number;
+  bankSettlementMatched: boolean;
+  nullifierCollision: boolean;
+  escrowAction: "RELEASE" | "FREEZE" | "FLAG_REVIEW";
+}
+
+export interface AdversarialSimulationReport {
+  totalExpenditures: number;
+  legitimateCount: number;
+  forgedCount: number;
+  duplicateCount: number;
+  modifiedDuplicateCount: number;
+  truePositives: number;
+  trueNegatives: number;
+  falsePositives: number;
+  falseNegatives: number;
+  precision: number;
+  recall: number;
+  falsePositiveRate: number;
+  falseNegativeRate: number;
+  duplicateDetectionRate: number;
+  unsupportedEvidenceRate: number;
+  averageProcessingTimeMs: number;
+  escrowStatusFinal: "ACTIVE" | "FROZEN";
+  items: AdversarialSimulationItem[];
+}
+

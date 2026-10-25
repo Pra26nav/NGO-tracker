@@ -69,10 +69,69 @@ try:
 except Exception as e:
     print(f"Warning: Failed to import history_engine router: {e}")
 
+# Web3.py On-Chain Receipt Verification Engine
+try:
+    from web3_verifier import verify_on_chain_receipt, get_web3_status
 
+    @app.get("/api/web3/status")
+    def web3_status():
+        return get_web3_status()
 
+    @app.get("/api/web3/receipt/{tx_hash}")
+    def get_tx_receipt(tx_hash: str):
+        return verify_on_chain_receipt(tx_hash)
+except Exception as e:
+    print(f"Warning: Failed to load web3_verifier: {e}")
 
-# Global On-Chain Mirror State (Simulates PurposeBoundEscrow.sol & NullifierRegistry)
+# ── Research Integrated Augmented Subsystems ────────────────
+try:
+    from provenance_engine import router as provenance_router
+    app.include_router(provenance_router)
+except Exception as e:
+    print(f"Warning: Failed to import provenance router: {e}")
+
+try:
+    from canonical_evidence import router as evidence_router
+    app.include_router(evidence_router)
+except Exception as e:
+    print(f"Warning: Failed to import evidence router: {e}")
+
+try:
+    from zk_verifier import router as zk_router
+    app.include_router(zk_router)
+except Exception as e:
+    print(f"Warning: Failed to import zk router: {e}")
+
+try:
+    from charity_intelligence import router as intelligence_router
+    app.include_router(intelligence_router)
+except Exception as e:
+    print(f"Warning: Failed to import intelligence router: {e}")
+
+try:
+    from discrepancy_engine import router as discrepancy_router
+    app.include_router(discrepancy_router)
+except Exception as e:
+    print(f"Warning: Failed to import discrepancy router: {e}")
+
+try:
+    from credentials_vc import router as vc_router
+    app.include_router(vc_router)
+except Exception as e:
+    print(f"Warning: Failed to import vc router: {e}")
+
+try:
+    from adversarial_simulation import router as simulation_router
+    app.include_router(simulation_router)
+except Exception as e:
+    print(f"Warning: Failed to import simulation router: {e}")
+
+try:
+    from watchers import router as watchers_router
+    app.include_router(watchers_router)
+except Exception as e:
+    print(f"Warning: Failed to import watchers router: {e}")
+
 GLOBAL_NULLIFIER_REGISTRY = {}
 GLOBAL_PHASH_REGISTRY = []
 ESCROW_STATE = {

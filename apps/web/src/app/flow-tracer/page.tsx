@@ -4,6 +4,9 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import seedData from "@/data/campaign-seed.json";
 import { useLedger, LedgerTransaction } from "@/context/ledger-context";
+import { ZKProofInspector } from "@/components/ZKProofInspector";
+import { CanonicalFundGraph } from "@/components/CanonicalFundGraph";
+import { isDemoSafeMode } from "@/lib/demo-safe";
 
 /* ────────────────────────────────────────────────────────────
    Types for Feature #2: Follow the Money DAG & ZK Auditor
@@ -364,12 +367,18 @@ export default function FlowTracerPage() {
   const [activeTab, setActiveTab] = useState<"flow" | "zk" | "oracles">("flow");
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  // Poll backend health and fetch initial state
+  // Poll backend health and fetch initial state (?demo=safe forces offline instantly)
   useEffect(() => {
     let isMounted = true;
+    if (isDemoSafeMode()) {
+      setApiOnline(false);
+      return;
+    }
     async function checkApi() {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/dag-state");
+        const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/dag-state", {
+          signal: AbortSignal.timeout(2000),
+        });
         if (res.ok) {
           if (isMounted) setApiOnline(true);
         } else {
@@ -386,9 +395,14 @@ export default function FlowTracerPage() {
   // Fetch ZK Beneficiaries from API or use static
   useEffect(() => {
     let isMounted = true;
+    if (isDemoSafeMode()) {
+      return;
+    }
     async function fetchZk() {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/zk-beneficiaries");
+        const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/zk-beneficiaries", {
+          signal: AbortSignal.timeout(2000),
+        });
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
@@ -397,7 +411,7 @@ export default function FlowTracerPage() {
           }
         }
       } catch {
-        // keep static
+        // silently keep static
       }
     }
     fetchZk();
@@ -415,24 +429,25 @@ export default function FlowTracerPage() {
     setIsVerifyingZk(true);
     setVerificationResult(null);
 
-    // Call API if online
-    if (apiOnline) {
+    // Call API if online and not in demo=safe mode
+    if (apiOnline && !isDemoSafeMode()) {
       try {
         const res = await fetch("http://127.0.0.1:8000/api/flow-tracer/verify-merkle-proof", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ index }),
+          signal: AbortSignal.timeout(2500),
         });
         if (res.ok) {
           const data = await res.json();
           setTimeout(() => {
             setVerificationResult(data);
             setIsVerifyingZk(false);
-          }, 400);
+          }, 350);
           return;
         }
       } catch {
-        // fallback to offline calculation
+        // fallback to offline calculation silently
       }
     }
 
@@ -568,6 +583,19 @@ export default function FlowTracerPage() {
             >
               <span>🎯</span> Feature #4
             </Link>
+
+            {/* Universal Reset Demo State Button */}
+            <button
+              id="flow-tracer-header-reset-btn"
+              onClick={() => {
+                ledger.resetToBaseline();
+                setIsSkimmingSimulated(false);
+              }}
+              title="Reset demo balances and state to baseline"
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 hover:text-white border border-indigo-500/40 hover:border-indigo-400 transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <span>🔄 Reset Demo State</span>
+            </button>
           </div>
 
         </div>
@@ -641,16 +669,29 @@ export default function FlowTracerPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleToggleSkimming(!isSkimmingSimulated)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-lg ${
-                  isSkimmingSimulated
-                    ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 border border-red-400"
-                    : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30 border border-indigo-400"
-                }`}
-              >
-                <span>{isSkimmingSimulated ? "🔄 Reset to Normal Flow" : "🚨 Simulate 14.8% FX Skimming"}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  id="flow-tracer-reset-demo-btn"
+                  onClick={() => {
+                    ledger.resetToBaseline();
+                    setIsSkimmingSimulated(false);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-white border border-indigo-500/40 hover:border-indigo-400"
+                >
+                  <span>🔄 Reset Demo State</span>
+                </button>
+
+                <button
+                  onClick={() => handleToggleSkimming(!isSkimmingSimulated)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-lg ${
+                    isSkimmingSimulated
+                      ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 border border-red-400"
+                      : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30 border border-indigo-400"
+                  }`}
+                >
+                  <span>{isSkimmingSimulated ? "🔄 Reset to Normal Flow" : "🚨 Simulate 14.8% FX Skimming"}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -694,6 +735,9 @@ export default function FlowTracerPage() {
             ╚══════════════════════════════════════════════════╝ */}
         {activeTab === "flow" && (
           <div className="space-y-6">
+            {/* Augmented Canonical Fund Graph with Proportional Taint Accounting */}
+            <CanonicalFundGraph isSkimmingSimulated={isSkimmingSimulated} />
+
             {/* The 5 Hops Interactive DAG Pipeline */}
             <section className="glass rounded-2xl p-5 border border-slate-800">
               <div className="flex items-center justify-between mb-4">
@@ -1008,6 +1052,13 @@ export default function FlowTracerPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Hop 5 Specific: Interactive ZK Privacy Proof Inspector */}
+              {selectedHop.hopNumber === 5 && (
+                <div className="mt-6 pt-6 border-t border-slate-800">
+                  <ZKProofInspector />
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -1088,6 +1139,9 @@ export default function FlowTracerPage() {
                 </div>
               </div>
             </section>
+
+            {/* ── Interactive ZK Proof & Selective Disclosure Inspector ─── */}
+            <ZKProofInspector />
 
             {/* Split View: 5 Public Leaves vs 142 Private Beneficiary Leaves */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

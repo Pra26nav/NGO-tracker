@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLedger } from "@/context/ledger-context";
+import { isDemoSafeMode } from "@/lib/demo-safe";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -14,6 +15,7 @@ import {
   Coins,
   CheckCircle2,
   AlertTriangle,
+  Zap,
 } from "lucide-react";
 
 export function LiveSyncBanner() {
@@ -29,7 +31,12 @@ export function LiveSyncBanner() {
   } = useLedger();
 
   const [isResetting, setIsResetting] = useState(false);
+  const [demoSafeActive, setDemoSafeActive] = useState(false);
   const isFrozen = escrowStatus === "FROZEN";
+
+  useEffect(() => {
+    setDemoSafeActive(isDemoSafeMode());
+  }, []);
 
   const handleReset = () => {
     setIsResetting(true);
@@ -74,6 +81,14 @@ export function LiveSyncBanner() {
               </span>
             </div>
           )}
+
+          {/* Demo Safe Indicator */}
+          {demoSafeActive && (
+            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1">
+              <Zap className="w-3 h-3 text-amber-400" />
+              <span>DEMO SAFE MODE (?demo=safe)</span>
+            </span>
+          )}
         </div>
 
         {/* Right: Real-time Synchronized Badges & Quick Reset */}
@@ -108,15 +123,16 @@ export function LiveSyncBanner() {
             </button>
           )}
 
-          {/* Reset Demo State Button */}
+          {/* Universal Reset Demo State Button */}
           <button
+            id="global-reset-demo-btn"
             onClick={handleReset}
             disabled={isResetting}
             title="Reset demo balances and state to baseline seed"
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 text-[11px] transition-all"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 hover:text-white border border-indigo-500/40 text-[11px] font-bold transition-all shadow-sm hover:border-indigo-400"
           >
-            <RefreshCw className={`w-3 h-3 ${isResetting ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Reset State</span>
+            <RefreshCw className={`w-3 h-3 text-indigo-400 ${isResetting ? "animate-spin" : ""}`} />
+            <span>🔄 Reset Demo State</span>
           </button>
         </div>
       </div>

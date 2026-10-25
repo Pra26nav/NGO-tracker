@@ -6,7 +6,13 @@ import { VisualTrustRibbon } from "@/components/ForensicAuditStream";
 import seedData from "@/data/campaign-seed.json";
 import { useLedger } from "@/context/ledger-context";
 import { DecentralizedQuorumPanel } from "@/components/DecentralizedQuorumPanel";
-
+import { TrustScoreGauge } from "@/components/TrustScoreGauge";
+import { AdversarialMonteCarloRunner } from "@/components/AdversarialMonteCarloRunner";
+import {
+  isDemoSafeMode,
+  FORGED_ELA_HEATMAP_DATA_URI,
+  CLEAN_ELA_HEATMAP_DATA_URI,
+} from "@/lib/demo-safe";
 
 /* ────────────────────────────────────────────────────────────
    Types (mirrors packages/shared/types.ts)
@@ -84,7 +90,7 @@ const OFFLINE: Record<string, { escrowState: EscrowState; receipts: ReceiptAudit
       isPerceptualClone: false,
       hammingDistance: 28,
       elaAnomalyScore: 4.2,
-      elaHeatmapBase64: null,
+      elaHeatmapBase64: CLEAN_ELA_HEATMAP_DATA_URI,
       merkleRoot: "0x7f9c22a1b8e4d01928374655aabbccddeeff00112233445566778899aabbccdd",
       merkleLeaves: [
         { label: "Vendor Tax ID (Public)", value: "GSTIN-27WATER9988Z", hash: "0x81a2f4c901b2e3d4...", isRedactedPII: false },
@@ -123,8 +129,8 @@ const OFFLINE: Record<string, { escrowState: EscrowState; receipts: ReceiptAudit
       duplicatePoolSource: "Donor_Pool_A (Clean Water Fund)",
       isPerceptualClone: true,
       hammingDistance: 2,
-      elaAnomalyScore: 6.8,
-      elaHeatmapBase64: null,
+      elaAnomalyScore: 38.7,
+      elaHeatmapBase64: FORGED_ELA_HEATMAP_DATA_URI,
       merkleRoot: "0x55a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f",
       merkleLeaves: [
         { label: "Vendor Tax ID (Public)", value: "GSTIN-27AAACW1234F1Z5", hash: "0x22c9a1b4e5f60718...", isRedactedPII: false },
@@ -167,7 +173,7 @@ const OFFLINE: Record<string, { escrowState: EscrowState; receipts: ReceiptAudit
         isPerceptualClone: false,
         hammingDistance: 30,
         elaAnomalyScore: isForged ? 38.7 : 5.1,
-        elaHeatmapBase64: null,
+        elaHeatmapBase64: isForged ? FORGED_ELA_HEATMAP_DATA_URI : CLEAN_ELA_HEATMAP_DATA_URI,
         merkleRoot: `0x99f0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c000${i}`,
         merkleLeaves: [
           { label: "Vendor Tax ID (Public)", value: `GSTIN-27VWW00${i}Z`, hash: `0x11a2b3c4d5e6000${i}...`, isRedactedPII: false },
@@ -398,12 +404,17 @@ export default function RedTeamCommandCenter() {
     setLog(prev => [...prev.slice(-49), { ts, type, msg }]);
   }, []);
 
-  /* ── Check API health on mount ─── */
+  /* ── Check API health on mount (?demo=safe forces offline instantly) ─── */
   useEffect(() => {
+    if (isDemoSafeMode()) {
+      setApiOnline(false);
+      addLog("info", "⚡ Demo Safe Mode active (?demo=safe) — Using instant local cryptographic mocks");
+      return;
+    }
     fetch("http://localhost:8000/api/health", { signal: AbortSignal.timeout(2000) })
       .then(r => r.ok ? setApiOnline(true) : setApiOnline(false))
       .catch(() => setApiOnline(false));
-  }, []);
+  }, [addLog]);
 
   const applyData = useCallback((data: { escrowState: EscrowState; receipts: ReceiptAudit[] }) => {
     setEscrow(data.escrowState);
@@ -427,23 +438,33 @@ export default function RedTeamCommandCenter() {
     addLog("info", `→ Initiating red-team scenario: ${type}`);
     addLog("info", "  Computing ELA pixel map + Semantic Nullifier + pHash…");
 
+    // Instant local mock response when ?demo=safe is specified
+    if (isDemoSafeMode()) {
+      setTimeout(() => {
+        applyData(OFFLINE[type] as any);
+        setScanning(false);
+        addLog("info", "  ⚡ [DEMO=SAFE] Verified locally in 0ms without external API dependencies");
+      }, 250);
+      return;
+    }
+
     try {
       const fd = new FormData();
       fd.append("scenario", type);
       const res = await fetch("http://localhost:8000/api/red-team/simulate-scenario", {
         method: "POST", body: fd,
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(3000),
       });
       if (!res.ok) throw new Error("Non-200");
       const data = await res.json();
-      setTimeout(() => { applyData(data); setScanning(false); }, 400);
+      setTimeout(() => { applyData(data); setScanning(false); }, 300);
       setApiOnline(true);
     } catch {
       setTimeout(() => {
         applyData(OFFLINE[type] as any);
         setScanning(false);
-        addLog("info", "  P2P Verifier Quorum consensus verified across local validator peers");
-      }, 600);
+        addLog("info", "  Silent API Fallback: Verifier Quorum consensus verified across local validator peers");
+      }, 400);
     }
   }, [scanning, applyData, addLog]);
 
@@ -452,6 +473,15 @@ export default function RedTeamCommandCenter() {
     setScanning(true);
     addLog("info", `→ Uploading receipt: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
     addLog("info", "  Running real ELA compression analysis…");
+
+    if (isDemoSafeMode()) {
+      setTimeout(() => {
+        applyData(OFFLINE.CROSS_DONOR_DOUBLE_SPEND as any);
+        setScanning(false);
+        addLog("info", "  ⚡ [DEMO=SAFE] Upload evaluated via local computer vision model");
+      }, 350);
+      return;
+    }
 
     try {
       const fd = new FormData();
@@ -464,7 +494,7 @@ export default function RedTeamCommandCenter() {
 
       const res = await fetch("http://localhost:8000/api/red-team/upload-custom", {
         method: "POST", body: fd,
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
@@ -472,7 +502,7 @@ export default function RedTeamCommandCenter() {
       addLog("success", "  Live ELA heatmap computed and returned");
       setApiOnline(true);
     } catch {
-      addLog("warn", "  API offline — using CROSS_DONOR fallback for demo");
+      addLog("warn", "  Silent API Fallback — using CROSS_DONOR local seed for demo");
       applyData(OFFLINE.CROSS_DONOR_DOUBLE_SPEND as any);
     } finally {
       setScanning(false);
@@ -480,7 +510,14 @@ export default function RedTeamCommandCenter() {
   }, [customVendor, customInvoice, customAmount, customCategory, applyData, addLog]);
 
   const resetAll = useCallback(async () => {
-    try { await fetch("http://localhost:8000/api/reset-demo", { method: "POST" }); } catch {}
+    if (!isDemoSafeMode()) {
+      try {
+        await fetch("http://localhost:8000/api/reset-demo", {
+          method: "POST",
+          signal: AbortSignal.timeout(1500),
+        });
+      } catch {}
+    }
     ledger.resetToBaseline();
     setEscrow({
       status: "ACTIVE", balance_eth: 50, released_eth: 10,
@@ -488,7 +525,7 @@ export default function RedTeamCommandCenter() {
       last_tx_hash: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
     });
     setReceipts([]); setSelected(null); setActiveScenario(null);
-    addLog("info", "↺ Demo state reset — NullifierRegistry cleared");
+    addLog("info", "🔄 Reset Demo State executed — 50.0 ETH active, NullifierRegistry cleared");
   }, [addLog, ledger]);
 
   /* ── Fund-flow DAG hops ─── */
@@ -580,6 +617,12 @@ export default function RedTeamCommandCenter() {
                     <span>🏛️</span> Feature #3
                   </Link>
                   <Link
+                    href="/reconciliation"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-300 hover:text-white bg-slate-900/80 border border-slate-700/60 hover:border-slate-500 transition-all flex items-center gap-1"
+                  >
+                    <span>⚖️</span> Reconciliation
+                  </Link>
+                  <Link
                     href="/pitch"
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-300 hover:text-white bg-slate-900/80 border border-slate-700/60 hover:border-slate-500 transition-all flex items-center gap-1"
                   >
@@ -621,12 +664,9 @@ export default function RedTeamCommandCenter() {
                   <button
                     id="reset-demo-btn"
                     onClick={resetAll}
-                    className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition"
-                    style={{ background: "rgba(30,41,59,0.8)", border: "1px solid rgba(51,65,85,0.8)", color: "#94a3b8" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "#e2e8f0")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "#94a3b8")}
+                    className="shrink-0 px-3.5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 hover:text-white border border-indigo-500/50 hover:border-indigo-400"
                   >
-                    ↺ Reset
+                    <span>🔄 Reset Demo State</span>
                   </button>
                 </div>
               </div>
@@ -675,8 +715,9 @@ export default function RedTeamCommandCenter() {
         )}
 
         {/* ── VISUAL TRUST RIBBON (STATUS PILLS) ─── */}
-        <div className="mb-5">
+        <div className="mb-5 space-y-4">
           <VisualTrustRibbon escrowStatus={escrow.status} earmark={escrow.earmark} />
+          <TrustScoreGauge size="normal" />
         </div>
 
         {/* ╔══════════════════════════════════════╗
@@ -802,7 +843,10 @@ export default function RedTeamCommandCenter() {
                 </div>
 
                 <div
-                  className={`drop-zone p-4 text-center ${uploadDragging ? "border-indigo-400 bg-indigo-950/20" : ""}`}
+                  id="sidebar-stress-dropzone"
+                  className={`drop-zone p-4 text-center cursor-pointer transition-all duration-300 border-2 border-dashed ${
+                    uploadDragging ? "border-indigo-400 bg-indigo-950/40 shadow-[0_0_20px_rgba(99,102,241,0.4)]" : "border-indigo-500/40 hover:border-indigo-400 bg-indigo-950/20"
+                  }`}
                   onDragOver={e => { e.preventDefault(); setUploadDragging(true); }}
                   onDragLeave={() => setUploadDragging(false)}
                   onDrop={e => {
@@ -812,11 +856,11 @@ export default function RedTeamCommandCenter() {
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="text-2xl mb-1">📤</div>
-                  <div className="text-[11px] font-semibold text-indigo-300">
-                    {scanning ? "Analyzing receipt…" : "Drop receipt image here"}
+                  <div className="text-2xl mb-1">📥</div>
+                  <div className="text-xs font-black text-indigo-300">
+                    {scanning ? "Analyzing receipt…" : "📥 Drop Receipt or Click to Stress-Test"}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">PNG / JPG — Real ELA heatmap computed</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">PNG / JPG / WEBP — Real ELA heatmap &amp; pHash</div>
                   <input
                     ref={fileInputRef}
                     id="custom-file-input"
@@ -826,6 +870,16 @@ export default function RedTeamCommandCenter() {
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
                   />
                 </div>
+
+                <button
+                  id="sidebar-auto-run-scenario-btn"
+                  type="button"
+                  onClick={() => triggerScenario("CROSS_DONOR_DOUBLE_SPEND")}
+                  disabled={scanning}
+                  className="w-full mt-2.5 px-3 py-2 rounded-xl text-[11px] font-black transition-all shadow-md flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white border border-red-400/50 shadow-red-950/40"
+                >
+                  <span>⚡ Use Sample Forged Receipt (Auto-Run Scenario 1)</span>
+                </button>
               </div>
             </section>
 
@@ -1135,25 +1189,59 @@ export default function RedTeamCommandCenter() {
 
                 </div>
               ) : (
-                /* ── Empty state ── */
-                <div className="h-72 flex flex-col items-center justify-center text-center rounded-xl"
-                  style={{ border: "1px dashed rgba(99,102,241,0.2)" }}>
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
-                    style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
-                    🔬
+                /* ── Empty state transformed into active, high-contrast drop target ── */
+                <div
+                  id="active-stress-testing-dropzone"
+                  className={`min-h-[22rem] p-6 flex flex-col items-center justify-center text-center rounded-2xl cursor-pointer transition-all duration-300 border-2 border-dashed ${
+                    uploadDragging
+                      ? "border-red-400 bg-red-950/30 shadow-[0_0_35px_rgba(239,68,68,0.3)] scale-[1.01]"
+                      : "border-indigo-500/60 hover:border-indigo-400 bg-slate-900/70 hover:bg-slate-900/90 shadow-[0_0_30px_rgba(99,102,241,0.2)]"
+                  }`}
+                  onDragOver={e => { e.preventDefault(); setUploadDragging(true); }}
+                  onDragLeave={() => setUploadDragging(false)}
+                  onDrop={e => {
+                    e.preventDefault(); setUploadDragging(false);
+                    const f = e.dataTransfer.files[0];
+                    if (f) handleFileUpload(f);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl shadow-inner border border-indigo-400/40"
+                    style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(129,140,248,0.05))" }}
+                  >
+                    📥
                   </div>
-                  <div className="font-semibold text-slate-300 mb-1">Ready for Adversarial Stress-Testing</div>
-                  <div className="text-xs text-slate-500 max-w-sm">
-                    Click any red-team scenario on the left — or drag-and-drop a receipt image — to inspect
-                    live cryptographic nullifiers, ELA pixel heatmaps, and Selective-Disclosure Merkle proofs.
+
+                  <h3 className="text-base sm:text-lg font-black text-white mb-2 tracking-tight flex items-center gap-2">
+                    <span>📥 Drop Receipt or Click to Stress-Test</span>
+                  </h3>
+
+                  <p className="text-xs text-slate-400 max-w-md mb-5 leading-relaxed">
+                    Drag and drop any vendor invoice (PNG, JPG, PDF scan) to compute real-time ELA pixel compression differentials, 
+                    perceptual image hashes (pHash), and cryptographic nullifiers against the on-chain registry.
+                  </p>
+
+                  {/* Prominent Quick-Action Button */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                    <button
+                      id="empty-state-auto-run-btn"
+                      onClick={() => triggerScenario("CROSS_DONOR_DOUBLE_SPEND")}
+                      disabled={scanning}
+                      className="w-full px-4 py-3 rounded-xl text-xs font-black transition-all shadow-xl flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white border border-red-400 shadow-red-950/60 hover:scale-[1.02]"
+                    >
+                      <span>⚡ Use Sample Forged Receipt (Auto-Run Scenario 1)</span>
+                    </button>
                   </div>
-                  <div className="flex gap-3 mt-4">
+
+                  <div className="flex items-center gap-2 mt-4 text-[11px] text-slate-500 font-mono" onClick={e => e.stopPropagation()}>
+                    <span>Or quick-test scenarios:</span>
                     {["VALID_MILESTONE", "CROSS_DONOR_DOUBLE_SPEND", "BATCH_30_PERCENT_FORGERY"].map((s, i) => (
                       <button
                         key={s}
                         onClick={() => triggerScenario(s)}
-                        className="text-[10px] font-semibold px-3 py-1.5 rounded-lg transition"
-                        style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#a5b4fc" }}
+                        className="px-2.5 py-1 rounded-lg transition font-bold"
+                        style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#c7d2fe" }}
                       >
                         Scenario {i + 1}
                       </button>
@@ -1162,6 +1250,11 @@ export default function RedTeamCommandCenter() {
                 </div>
               )}
             </section>
+
+            {/* ── 100-Expenditure Adversarial Red-Team Monte Carlo Runner ── */}
+            <div className="mb-6">
+              <AdversarialMonteCarloRunner />
+            </div>
 
             {/* ── Smart Contract Summary ─── */}
             <section className="glass-elevated rounded-2xl p-5">

@@ -5,6 +5,10 @@ import Link from "next/link";
 import seedData from "@/data/campaign-seed.json";
 import { useLedger } from "@/context/ledger-context";
 import { DecentralizedQuorumPanel } from "@/components/DecentralizedQuorumPanel";
+import { TrustScoreGauge } from "@/components/TrustScoreGauge";
+import { ZKProofInspector } from "@/components/ZKProofInspector";
+import { CharityIntelligenceDrawer } from "@/components/CharityIntelligenceDrawer";
+import { isDemoSafeMode, generateReceiptThumbnailSvg } from "@/lib/demo-safe";
 
 /* ────────────────────────────────────────────────────────────
    Types for Feature #3: Purpose Escrow & Tranche Drip Dashboard
@@ -54,6 +58,153 @@ interface ActivityEvent {
   color: "indigo" | "emerald" | "red" | "cyan" | "amber";
   details: string;
 }
+
+interface GalleryReceipt {
+  id: string;
+  title: string;
+  invoiceNo: string;
+  vendor: string;
+  vendorTaxId: string;
+  amountEth: number;
+  amountInr: number;
+  amountUsd: number;
+  stage: string;
+  category: string;
+  elaScore: number;
+  pHash: string;
+  nullifier: string;
+  merkleRoot: string;
+  date: string;
+  status: "VERIFIED_RELEASED" | "VERIFIED_LOCKED" | "STAGED";
+  thumbnailUrl: string;
+  description: string;
+}
+
+/* ────────────────────────────────────────────────────────────
+   Preloaded Realistic Milestone Receipt Gallery (5-6 Entries)
+──────────────────────────────────────────────────────────── */
+const INITIAL_GALLERY_RECEIPTS: GalleryReceipt[] = [
+  {
+    id: "REC-401",
+    title: "Tranche 1 Borewell Sourcing",
+    invoiceNo: "INV-2026-0401",
+    vendor: "Vidarbha Geological & Drilling Works",
+    vendorTaxId: "GSTIN-27VWW001Z",
+    amountEth: 10.0,
+    amountInr: 2692800,
+    amountUsd: 32000,
+    stage: "Stage 1 (Deep Borewell Rig Drilling)",
+    category: "Water Infrastructure",
+    elaScore: 4.2,
+    pHash: "9f8a44c1...31b2",
+    nullifier: "0x88c1901f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e33e1",
+    merkleRoot: "0x856c30affcf0560c9a992bfbeb4f8691fd1cc00cc943390101fddcd734135370",
+    date: "2026-10-24",
+    status: "VERIFIED_RELEASED",
+    thumbnailUrl: generateReceiptThumbnailSvg("INV-2026-0401", "Vidarbha Geological Drilling", "10.0 ETH (₹26.9L)", "✓ DISBURSED"),
+    description: "Milestone completion: 450-foot heavy aquifer borewell casing & site hydro-pressure certification.",
+  },
+  {
+    id: "REC-402",
+    title: "Phase 2 Solar Pump Installation",
+    invoiceNo: "INV-2026-0402",
+    vendor: "SunPower Rural Tech Pvt Ltd",
+    vendorTaxId: "GSTIN-27SOLAR4411Z",
+    amountEth: 15.0,
+    amountInr: 4039200,
+    amountUsd: 48000,
+    stage: "Stage 2 (Solar Submersible Array)",
+    category: "Water Infrastructure",
+    elaScore: 3.8,
+    pHash: "77d1a2f4...e90a",
+    nullifier: "0x88c2902f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e44e2",
+    merkleRoot: "0x9a01b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f",
+    date: "2026-10-25",
+    status: "VERIFIED_LOCKED",
+    thumbnailUrl: generateReceiptThumbnailSvg("INV-2026-0402", "SunPower Rural Tech", "15.0 ETH (₹40.3L)", "⏳ READY TO DRIP"),
+    description: "5HP solar brushless submersible pump array, dual-MPPT controller, and rural grid surge suppressor.",
+  },
+  {
+    id: "REC-403",
+    title: "Water Tank Logistics & Storage",
+    invoiceNo: "INV-2026-0403",
+    vendor: "Mahalaxmi Poly & HDPE Tanks",
+    vendorTaxId: "GSTIN-27TANK8819Z",
+    amountEth: 12.0,
+    amountInr: 3231360,
+    amountUsd: 38400,
+    stage: "Stage 3 (5,000L Potable Storage)",
+    category: "Water Infrastructure",
+    elaScore: 4.9,
+    pHash: "33f2a1b4...c5d6",
+    nullifier: "0x88c3903f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e55e3",
+    merkleRoot: "0xaa11b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f",
+    date: "2026-10-25",
+    status: "VERIFIED_LOCKED",
+    thumbnailUrl: generateReceiptThumbnailSvg("INV-2026-0403", "Mahalaxmi Poly Tanks", "12.0 ETH (₹32.3L)", "🔒 LOCKED IN VAULT"),
+    description: "4x 5,000L food-grade antimicrobial HDPE storage reservoirs staged and plumbed at village junction.",
+  },
+  {
+    id: "REC-404",
+    title: "Geological Hydro-Survey Mobilization",
+    invoiceNo: "INV-2026-0399",
+    vendor: "GeoGround Hydrological Consultants",
+    vendorTaxId: "GSTIN-27GEO7721Z",
+    amountEth: 3.0,
+    amountInr: 807840,
+    amountUsd: 9600,
+    stage: "Aquifer Vein Mapping & Soil Test",
+    category: "Water Infrastructure",
+    elaScore: 3.1,
+    pHash: "11e4a7c2...b3d4",
+    nullifier: "0x88c4904f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e66e4",
+    merkleRoot: "0xbb22c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f00",
+    date: "2026-10-24",
+    status: "VERIFIED_RELEASED",
+    thumbnailUrl: generateReceiptThumbnailSvg("INV-2026-0399", "GeoGround Consultants", "3.0 ETH (₹8.07L)", "✓ DISBURSED"),
+    description: "Comprehensive electrical resistivity tomography (ERT) survey verifying high-yield subterranean water strata.",
+  },
+  {
+    id: "REC-405",
+    title: "Piping Network & Water ATM Handover",
+    invoiceNo: "INV-2026-0405",
+    vendor: "Nagpur PVC & Sanitary Hardware",
+    vendorTaxId: "GSTIN-27PVC3311Z",
+    amountEth: 8.0,
+    amountInr: 2154240,
+    amountUsd: 25600,
+    stage: "1.2km HDPE Distribution & Dispenser",
+    category: "Water Infrastructure",
+    elaScore: 4.5,
+    pHash: "55d6e7f8...091a",
+    nullifier: "0x88c5905f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e77e5",
+    merkleRoot: "0xcc33d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f0011",
+    date: "2026-10-25",
+    status: "STAGED",
+    thumbnailUrl: generateReceiptThumbnailSvg("INV-2026-0405", "Nagpur PVC Hardware", "8.0 ETH (₹21.5L)", "🔒 STAGED"),
+    description: "Pressure-rated PN16 piping network connecting community storage to RFID Smart Water dispensing ATM.",
+  },
+  {
+    id: "REC-406",
+    title: "Community Panchayat Verification Audit",
+    invoiceNo: "AUD-2026-0042",
+    vendor: "Wardha District Panchayat Water Council",
+    vendorTaxId: "GSTIN-27GOV9901Z",
+    amountEth: 2.0,
+    amountInr: 538560,
+    amountUsd: 6400,
+    stage: "Grampanchayat Household Handover",
+    category: "Water Infrastructure",
+    elaScore: 2.9,
+    pHash: "88a9b0c1...d2e3",
+    nullifier: "0x88c6906f2a4b77d1e2f3a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e88e6",
+    merkleRoot: "0xdd44e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f002233",
+    date: "2026-10-25",
+    status: "VERIFIED_RELEASED",
+    thumbnailUrl: generateReceiptThumbnailSvg("AUD-2026-0042", "Wardha Panchayat Council", "2.0 ETH (₹5.38L)", "✓ DISBURSED"),
+    description: "Independent Grampanchayat resolution signed by 142 household representatives certifying potable water availability.",
+  },
+];
 
 /* ────────────────────────────────────────────────────────────
    Offline Fallback State (Loaded directly from campaign-seed.json)
@@ -107,8 +258,8 @@ const INITIAL_ACTIVITY: ActivityEvent[] = [
   {
     id: "ACT-1002",
     type: "TRANCHE_RELEASED",
-    title: "Tranche 1 Drip Disbursed (20%)",
-    subtitle: "Mobilization & Site Survey Released to Contractor",
+    title: "Tranche 1 Borewell Sourcing Disbursed (10.00 ETH)",
+    subtitle: "Deep Borewell Drilling & Casing Released to Vidarbha Water Works",
     amount: "10.00 ETH ($32,000 USD)",
     timestamp: "2026-10-24 14:20:00 UTC",
     blockNumber: 20491845,
@@ -119,6 +270,32 @@ const INITIAL_ACTIVITY: ActivityEvent[] = [
   },
   {
     id: "ACT-1003",
+    type: "TRANCHE_RELEASED",
+    title: "Phase 2 Solar Pump Installation Proof Verified",
+    subtitle: "5HP Solar Submersible Inverter Handover — SunPower Rural Tech",
+    amount: "15.00 ETH ($48,000 USD)",
+    timestamp: "2026-10-25 09:15:00 UTC",
+    blockNumber: 20491850,
+    txHash: "0x6f20a3cc1199bb0022dd33445566778899aabbccddeeff0011223344556677",
+    badge: "VERIFIED EARMARK",
+    color: "emerald",
+    details: "Perceptual hash collision check passed (Hamming distance 28). ELA score 3.8/50.0 uniform.",
+  },
+  {
+    id: "ACT-1004",
+    type: "TRANCHE_RELEASED",
+    title: "Water Tank Logistics & 5,000L Storage Delivery",
+    subtitle: "Mahalaxmi Poly & HDPE Tanks — Village Junction Staging",
+    amount: "12.00 ETH ($38,400 USD)",
+    timestamp: "2026-10-25 10:45:00 UTC",
+    blockNumber: 20491858,
+    txHash: "0x7a31b4dd2200cc1133ee445566778899aabbccddeeff001122334455667788",
+    badge: "LOGISTICS PASS",
+    color: "indigo",
+    details: "GPS logistics waypoint corroborated by 2/3 validator quorum. 4x 5,000L tanks received.",
+  },
+  {
+    id: "ACT-1005",
     type: "ORACLE_HEARTBEAT",
     title: "Chainlink Reference Price Heartbeat",
     subtitle: "ETH/USD $3,200.00 | USD/INR ₹84.15 (RBI)",
@@ -191,10 +368,18 @@ export default function DashboardPage() {
   const [isConnectedWallet, setIsConnectedWallet] = useState<boolean>(true);
   const [connectedWalletAddress] = useState<string>("0x71C9414B8B67B543D75e3Ea2E59E50Eb147Eb901");
 
+  const [selectedGalleryReceipt, setSelectedGalleryReceipt] = useState<GalleryReceipt | null>(null);
+
   // Fetch Dashboard State from API
   const fetchState = useCallback(async () => {
+    if (isDemoSafeMode()) {
+      setApiOnline(false);
+      return;
+    }
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/dashboard/state");
+      const res = await fetch("http://127.0.0.1:8000/api/dashboard/state", {
+        signal: AbortSignal.timeout(2000),
+      });
       if (res.ok) {
         const data = await res.json();
         setApiOnline(true);
@@ -570,12 +755,35 @@ export default function DashboardPage() {
             </span>
 
             <Link
+              href="/reconciliation"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-300 hover:text-white bg-slate-900/80 border border-slate-700/60 hover:border-slate-500 transition-all flex items-center gap-1"
+            >
+              <span>⚖️</span>
+              <span>Reconciliation</span>
+            </Link>
+
+            <Link
               href="/pitch"
               className="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-300 hover:text-white bg-slate-900/80 border border-slate-700/60 hover:border-slate-500 transition-all flex items-center gap-1"
             >
               <span>🎯</span>
               <span>Feature #4</span>
             </Link>
+
+            {/* Universal Reset Demo State Button */}
+            <button
+              id="dashboard-header-reset-btn"
+              onClick={() => {
+                ledger.resetToBaseline();
+                setCampaign(INITIAL_CAMPAIGN);
+                setTranches(INITIAL_TRANCHES);
+                setActivityFeed(INITIAL_ACTIVITY);
+              }}
+              title="Reset demo balances and state to baseline"
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 hover:text-white border border-indigo-500/40 hover:border-indigo-400 transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <span>🔄 Reset Demo State</span>
+            </button>
 
             {/* Wallet Button */}
             <button
@@ -590,6 +798,11 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* ╔══════════════════════════════════════════════════╗
+            ║  HERO PROBABILISTIC TRUST SCORE GAUGE (0–100)    ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <TrustScoreGauge size="hero" />
+
         {/* ╔══════════════════════════════════════════════════╗
             ║  EMERGENCY FREEZE CRIMSON WARNING BANNER         ║
             ╚══════════════════════════════════════════════════╝ */}
@@ -678,8 +891,22 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Right: Actions (Lock New Donation / Emergency Freeze) */}
+            {/* Right: Actions (Lock New Donation / Emergency Freeze / Reset Demo) */}
             <div className="flex items-center gap-3 shrink-0 flex-wrap">
+              <button
+                id="escrow-reset-demo-btn"
+                onClick={() => {
+                  ledger.resetToBaseline();
+                  setCampaign(INITIAL_CAMPAIGN);
+                  setTranches(INITIAL_TRANCHES);
+                  setActivityFeed(INITIAL_ACTIVITY);
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-indigo-300 hover:text-white border border-indigo-500/40 hover:border-indigo-400"
+              >
+                <span>🔄</span>
+                <span>Reset Demo State</span>
+              </button>
+
               <button
                 onClick={() => setIsDepositModalOpen(true)}
                 className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2 border border-indigo-400"
@@ -767,6 +994,11 @@ export default function DashboardPage() {
         <DecentralizedQuorumPanel
           escrowStatus={campaign.isFrozen ? "FROZEN" : "ACTIVE"}
         />
+
+        {/* ╔══════════════════════════════════════════════════╗
+            ║  EXTERNAL CHARITY INTELLIGENCE (OPENGIVE PATTERN)║
+            ╚══════════════════════════════════════════════════╝ */}
+        <CharityIntelligenceDrawer className="mt-6" />
 
         {/* ╔══════════════════════════════════════════════════╗
             ║  B. MILESTONE TRANCHE & DRIP-RELEASE WORKFLOW    ║
@@ -871,6 +1103,100 @@ export default function DashboardPage() {
             })}
           </div>
         </section>
+
+        {/* ╔══════════════════════════════════════════════════╗
+            ║  PRELOADED MILESTONE RECEIPT GALLERY & AUDIT     ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <section id="receipt-gallery-section" className="glass rounded-2xl p-6 border border-slate-800 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  VERIFIED CRYPTOGRAPHIC ARTIFACTS
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {INITIAL_GALLERY_RECEIPTS.length} Pre-Seeded Proofs
+                </span>
+              </div>
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <span>📸</span> Verified Milestone Receipt Gallery
+              </h3>
+              <p className="text-xs text-slate-400">
+                Preloaded on-chain receipts featuring live Error Level Analysis (ELA) uniformity, pHash geometry deduplication, and selective-disclosure Merkle seals
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-mono text-slate-400">
+                Gallery State: <strong className="text-emerald-400">6 VERIFIED ENTRIES (ACTIVE)</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Grid of 6 realistic gallery cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {INITIAL_GALLERY_RECEIPTS.map((item) => (
+              <div
+                key={item.id}
+                id={`receipt-card-${item.id}`}
+                onClick={() => setSelectedGalleryReceipt(item)}
+                className="bg-slate-900/80 rounded-xl border border-slate-800/80 hover:border-indigo-500/60 transition-all p-4 flex flex-col justify-between gap-3 group cursor-pointer hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:scale-[1.01]"
+              >
+                {/* Thumbnail Preview Image with seal badge */}
+                <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950/80 aspect-[16/10] flex items-center justify-center">
+                  <img
+                    src={item.thumbnailUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-slate-700 text-[10px] font-mono text-slate-300">
+                    {item.invoiceNo}
+                  </div>
+                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-emerald-950/80 backdrop-blur-sm border border-emerald-500/40 text-[9px] font-mono font-bold text-emerald-300 flex items-center gap-1">
+                    <span>✓ ELA {item.elaScore}/50</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
+                      {item.title}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 truncate">
+                    {item.vendor}
+                  </div>
+                  <p className="text-[11px] text-slate-500 line-clamp-2">
+                    {item.description}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80 space-y-1.5 font-mono text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Verified Amount:</span>
+                    <span className="font-bold text-emerald-400">{item.amountEth.toFixed(1)} ETH (₹{(item.amountInr / 100000).toFixed(1)}L)</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 truncate">
+                    <span>Nullifier:</span>
+                    <span>{item.nullifier.slice(0, 14)}…</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full mt-1 py-1.5 rounded-lg bg-slate-800/70 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-slate-700/60 hover:border-indigo-500/50 text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>🔍 Inspect Forensic Proof</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ╔══════════════════════════════════════════════════╗
+            ║  C. ZERO-KNOWLEDGE PRIVACY PROOF INSPECTOR       ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <ZKProofInspector />
 
         {/* ╔══════════════════════════════════════════════════╗
             ║  D. PUBLIC TRANSPARENCY & AUDITOR FEED           ║
@@ -1053,6 +1379,85 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ╔══════════════════════════════════════════════════╗
+          ║  MODAL: FORENSIC RECEIPT PROOF INSPECTOR         ║
+          ╚══════════════════════════════════════════════════╝ */}
+      {selectedGalleryReceipt && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="glass-elevated bg-[#0b1120] border border-indigo-500/50 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧾</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {selectedGalleryReceipt.title}
+                  </h3>
+                  <div className="text-[11px] font-mono text-indigo-400">
+                    {selectedGalleryReceipt.invoiceNo} · {selectedGalleryReceipt.vendor}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedGalleryReceipt(null)}
+                className="text-slate-400 hover:text-white text-lg p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Receipt Preview Image */}
+            <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+              <img
+                src={selectedGalleryReceipt.thumbnailUrl}
+                alt={selectedGalleryReceipt.title}
+                className="w-full h-auto"
+              />
+            </div>
+
+            {/* Verification Metadata Grid */}
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase">Vendor Tax Identifier:</div>
+                <div className="font-bold text-white mt-0.5">{selectedGalleryReceipt.vendorTaxId}</div>
+              </div>
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase">Settled Amount:</div>
+                <div className="font-bold text-emerald-400 mt-0.5">{selectedGalleryReceipt.amountEth.toFixed(1)} ETH (₹{selectedGalleryReceipt.amountInr.toLocaleString("en-IN")})</div>
+              </div>
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase">ELA Compression Score:</div>
+                <div className="font-bold text-emerald-400 mt-0.5">✓ {selectedGalleryReceipt.elaScore} / 50.0 (Uniform)</div>
+              </div>
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase">pHash Geometry:</div>
+                <div className="font-bold text-indigo-300 mt-0.5">{selectedGalleryReceipt.pHash}</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs font-mono space-y-1">
+              <div className="text-[10px] text-slate-500 uppercase">Semantic Nullifier (On-Chain Registry):</div>
+              <div className="text-emerald-400 truncate text-[11px]">{selectedGalleryReceipt.nullifier}</div>
+              <div className="text-[10px] text-slate-500 uppercase pt-1">Selective-Disclosure Merkle Root:</div>
+              <div className="text-indigo-300 truncate text-[11px]">{selectedGalleryReceipt.merkleRoot}</div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Cryptographically Authenticated on PurposeBoundEscrow.sol</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedGalleryReceipt(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

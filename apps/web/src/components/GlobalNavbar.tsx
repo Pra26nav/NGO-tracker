@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { useLedger } from "@/context/ledger-context";
+import { TrustScoreGauge } from "@/components/TrustScoreGauge";
+import { ConnectWalletButton } from "@/components/ConnectWalletButton";
 
 export function GlobalNavbar() {
   const pathname = usePathname();
@@ -70,8 +72,10 @@ export function GlobalNavbar() {
     { href: "/red-team", label: "Red-Team", icon: "⚡", description: "Adversarial Stress Engine" },
     { href: "/flow-tracer", label: "Flow-Tracer", icon: "🌐", description: "5-Hop DAG & ZK Auditor" },
     { href: "/dashboard", label: "Dashboard", icon: "🏛️", description: "Escrow & Tranche Drip" },
+    { href: "/reconciliation", label: "Reconciliation", icon: "⚖️", description: "Report vs On-Chain Diff", badge: "DIFF" },
     { href: "/donate", label: "Donate", icon: "💳", description: "Crypto & Fiat UPI Gateway" },
-    { href: "/pitch", label: "Judge Pitch", icon: "🎯", description: "Scenario Runner & Q&A" },
+    { href: "/judge-pitch", label: "Judge Q&A", icon: "🎯", description: "Top 5 Defense Defenses", badge: "DEFENSE" },
+    { href: "/pitch", label: "Pitch Runner", icon: "🎬", description: "Scenario Runner & Live Terminal" },
   ];
 
   return (
@@ -127,8 +131,14 @@ export function GlobalNavbar() {
 
           {/* Right Status Badges & Quick Action */}
           <div className="flex items-center gap-2.5">
+            {/* Live Probabilistic Trust Score Gauge */}
+            <TrustScoreGauge size="compact" />
+
+            {/* Glowing Web3 Connect Wallet Button */}
+            <ConnectWalletButton />
+
             {/* Status indicator */}
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2">
               <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 ${
                 escrowStatus === "FROZEN"
                   ? "bg-red-950/70 text-red-400 border border-red-500/40"
@@ -137,13 +147,6 @@ export function GlobalNavbar() {
                 <span className={`w-1.5 h-1.5 rounded-full ${escrowStatus === "FROZEN" ? "bg-red-400 animate-ping" : "bg-emerald-400 animate-pulse"}`} />
                 <span>{escrowStatus === "FROZEN" ? "🚨 ESCROW FROZEN" : `🟢 ${vaultBalance.toFixed(1)} ETH LOCKED`}</span>
               </span>
-              
-              {apiOnline === true && (
-                <span className="text-[10px] font-mono px-2 py-1 rounded-full bg-slate-900 text-slate-300 border border-slate-800 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>API :8000</span>
-                </span>
-              )}
             </div>
 
             {/* Quick Donate CTA */}
@@ -161,7 +164,7 @@ export function GlobalNavbar() {
         {/* Global Feature Navigation Tabs Bar */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-2 border-t border-slate-800/60 no-scrollbar">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || (link.href !== "/pitch" && pathname.startsWith(link.href));
+            const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}

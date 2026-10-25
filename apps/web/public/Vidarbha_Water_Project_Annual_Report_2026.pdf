@@ -1,0 +1,149 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [ 4 0 R 6 0 R 8 0 R 10 0 R 12 0 R ] /Count 5 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 5 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 685 >>
+stream
+BT
+/F1 12 Tf
+50 720 Td
+16 TL
+(VIDARBHA RURAL WATER INFRASTRUCTURE INITIATIVE) '
+(ANNUAL EXPENDITURE & IMPACT REPORT 2025-2026) '
+(------------------------------------------------------------) '
+(Implementing NGO: Vidarbha Rural Development Society) '
+(Project Earmark: Water Infrastructure \(Maharashtra Cluster\)) '
+(Target Beneficiaries: 142 Drought-Affected Rural Households) '
+(Self-Audited Reporting Period: Nov 2025 - Oct 2026) '
+() '
+(EXECUTIVE SUMMARY:) '
+(This report presents the annual expenditure claims compiled by NGO management.) '
+(Total Claimed Project Outlay: INR 6,85,000 across 4 milestone expense items.) '
+(Status: Self-Certified Internal Annual Submission.) '
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 7 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+7 0 obj
+<< /Length 539 >>
+stream
+BT
+/F1 12 Tf
+50 720 Td
+16 TL
+(EXPENSE SCHEDULE - PAGE 8) '
+(============================================================) '
+(MILESTONE ITEM #401: Geological Water Table Survey & Hydro-Log) '
+(------------------------------------------------------------) '
+(Claimed Amount: INR 62,000) '
+(Vendor: Vidarbha Hydrogeology Consultants \(GSTIN-27VWW001Z\)) '
+(Payment Reference: RTGS Ref #RTGS2026102401) '
+(Category: Water Infrastructure) '
+(Purpose: Comprehensive hydrological survey across Wardha basin.) '
+(Status: Claimed & Certified.) '
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 9 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+9 0 obj
+<< /Length 702 >>
+stream
+BT
+/F1 12 Tf
+50 720 Td
+16 TL
+(EXPENSE SCHEDULE - PAGE 14) '
+(============================================================) '
+(MILESTONE ITEM #402: Borewell Deepening & Handpump Assembly) '
+(------------------------------------------------------------) '
+(Claimed Amount: INR 1,50,000 \(INFLATED OVER-REPORTING CLAIM\)) '
+(Vendor: Vidarbha Water Works & Drilling Pvt Ltd) '
+(Payment Reference: NEFT Wire Transfer - Ref #UTR991823) '
+(Category: Water Infrastructure) '
+(Target Site: Cluster B Borewells \(Depth: 180 meters\)) '
+(Notice: On-Chain Settled Truth via PurposeBoundEscrow.sol is strictly INR 1,20,000.) '
+(Delta Flagged: +INR 30,000 Unexplained Variance Detected by Inconsistency Engine.) '
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 11 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+11 0 obj
+<< /Length 676 >>
+stream
+BT
+/F1 12 Tf
+50 720 Td
+16 TL
+(EXPENSE SCHEDULE - PAGE 19) '
+(============================================================) '
+(MILESTONE ITEM #403: VIP Stakeholder Banquet Catering) '
+(------------------------------------------------------------) '
+(Claimed Amount: INR 3,85,000 \(OFF-CATEGORY MISAPPROPRIATION\)) '
+(Vendor: Apex Luxury Catering & Hospitality Events) '
+(Payment Reference: Corporate Debit Card - POS #8831) '
+(Claimed Category: Listed under Water Infrastructure Community Outreach) '
+(Notice: Off-category expenditure strictly violates keccak256\(Water Infrastructure\).) '
+(Smart Contract Status: Blocked and Rejected by PurposeBoundEscrow.sol bytecode.) '
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 13 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+13 0 obj
+<< /Length 573 >>
+stream
+BT
+/F1 12 Tf
+50 720 Td
+16 TL
+(EXPENSE SCHEDULE - PAGE 23) '
+(============================================================) '
+(MILESTONE ITEM #404: Submersible Motor Spare Units \(x4\)) '
+(------------------------------------------------------------) '
+(Claimed Amount: INR 88,000 \(PHANTOM INVOICE CLAIM\)) '
+(Vendor: Global Agrotech Supplies Ltd) '
+(Payment Reference: Cheque #991029) '
+(Category: Water Infrastructure) '
+(Notice: Zero on-chain settlement record found in NullifierRegistry.sol.) '
+(Audit Status: Phantom expenditure flagged by The Black Hole Ledger.) '
+ET
+endstream
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000143 00000 n 
+0000000218 00000 n 
+0000000344 00000 n 
+0000001080 00000 n 
+0000001206 00000 n 
+0000001796 00000 n 
+0000001922 00000 n 
+0000002675 00000 n 
+0000002803 00000 n 
+0000003531 00000 n 
+0000003659 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R >>
+startxref
+4284
+%%EOF

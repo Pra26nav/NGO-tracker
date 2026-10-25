@@ -1,0 +1,12 @@
+{
+  "name": "@black-hole-ledger/contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for The Black Hole Ledger: PurposeBoundEscrow and NullifierRegistry",
+  "scripts": {
+    "deploy:base-sepolia": "node scripts/deploy.js --network base-sepolia",
+    "deploy:amoy": "node scripts/deploy.js --network polygon-amoy"
+  },
+  "keywords": ["solidity", "escrow", "nullifier", "zk", "anti-fraud"],
+  "author": "The Black Hole Ledger Team",
+  "license": "MIT"
+}

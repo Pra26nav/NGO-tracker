@@ -127,6 +127,24 @@ contract PurposeBoundEscrow {
     }
 
     /**
+     * @notice Direct deposit and earmark for new campaign
+     */
+    function depositAndEarmark(string calldata _category) external payable returns (uint256) {
+        return createCampaign(msg.sender, _category);
+    }
+
+    /**
+     * @notice Deposit funds into an existing campaign with earmark verification
+     */
+    function depositAndEarmark(uint256 _campaignId, string calldata _category) external payable {
+        require(msg.value > 0, "Donation must be > 0");
+        Campaign storage c = campaigns[_campaignId];
+        require(!c.isFrozen, "Escrow is FROZEN - Cannot deposit");
+        c.totalDeposited += msg.value;
+        emit DonationLocked(_campaignId, msg.sender, c.ngo, msg.value, _category, block.timestamp);
+    }
+
+    /**
      * @notice Returns total number of tranches for a campaign
      */
     function getTrancheCount(uint256 _campaignId) external view returns (uint256) {

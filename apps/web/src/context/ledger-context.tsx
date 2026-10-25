@@ -81,14 +81,118 @@ export interface LedgerContextValue {
   freezeEscrow: (reason: string, offendingTxHash?: string) => void;
   unfreezeEscrow: () => void;
   resetToBaseline: () => void;
+  trustScore: number;
+  setTrustScore: (score: number) => void;
 }
 
-const STORAGE_KEY = "bhol_ledger_state_v3";
+const STORAGE_KEY = "bhol_ledger_state_v4";
 
 /* ────────────────────────────────────────────────────────────
-   Initial Baseline Seed Transactions
+   Initial Baseline Seed Transactions (Pre-populated 5-6 Realistic Entries)
 ──────────────────────────────────────────────────────────── */
 const INITIAL_TRANSACTIONS: LedgerTransaction[] = [
+  {
+    id: "TX-401",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "10.00 ETH",
+    amountEth: 10.0,
+    amountUsd: 32000.0,
+    amountInr: 2692800.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Tranche 1 Borewell Sourcing (Vidarbha Geological & Drilling)",
+    txHash: "0x5e19f2bb0088aa9911cc22dd33445566778899aabbccddeeff00112233445566",
+    status: "RELEASED",
+    timestamp: "2026-10-24 14:20:00 UTC",
+    block: 20491845,
+    taxReceiptId: "80G-2026-401001",
+  },
+  {
+    id: "TX-402",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "15.00 ETH",
+    amountEth: 15.0,
+    amountUsd: 48000.0,
+    amountInr: 4039200.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Phase 2 Solar Pump Installation (SunPower Rural Tech Ltd)",
+    txHash: "0x6f20a3cc1199bb0022dd33445566778899aabbccddeeff0011223344556677",
+    status: "LOCKED_IN_ESCROW",
+    timestamp: "2026-10-25 09:15:00 UTC",
+    block: 20491850,
+    taxReceiptId: "80G-2026-402002",
+  },
+  {
+    id: "TX-403",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "12.00 ETH",
+    amountEth: 12.0,
+    amountUsd: 38400.0,
+    amountInr: 3231360.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Water Tank Logistics & Storage (Mahalaxmi Poly & HDPE Tanks)",
+    txHash: "0x7a31b4dd2200cc1133ee445566778899aabbccddeeff001122334455667788",
+    status: "LOCKED_IN_ESCROW",
+    timestamp: "2026-10-25 10:45:00 UTC",
+    block: 20491858,
+    taxReceiptId: "80G-2026-403003",
+  },
+  {
+    id: "TX-404",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "3.00 ETH",
+    amountEth: 3.0,
+    amountUsd: 9600.0,
+    amountInr: 807840.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Geological Hydro-Survey Mobilization (GeoGround Consultants)",
+    txHash: "0x8b42c5ee3311dd2244ff5566778899aabbccddeeff00112233445566778899",
+    status: "RELEASED",
+    timestamp: "2026-10-24 11:30:00 UTC",
+    block: 20491830,
+    taxReceiptId: "80G-2026-404004",
+  },
+  {
+    id: "TX-405",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "8.00 ETH",
+    amountEth: 8.0,
+    amountUsd: 25600.0,
+    amountInr: 2154240.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Piping Network & Water ATM Handover (Nagpur PVC Hardware)",
+    txHash: "0x9c53d6ff4422ee33550066778899aabbccddeeff00112233445566778899aa",
+    status: "LOCKED_IN_ESCROW",
+    timestamp: "2026-10-25 12:20:00 UTC",
+    block: 20491872,
+    taxReceiptId: "80G-2026-405005",
+  },
+  {
+    id: "TX-406",
+    donor: "PurposeBoundEscrow.sol",
+    donorFull: "0x3Af19B02cD319985E1e012399F319114d5e56E1",
+    amount: "2.00 ETH",
+    amountEth: 2.0,
+    amountUsd: 6400.0,
+    amountInr: 538560.0,
+    rail: "CRYPTO",
+    token: "ETH",
+    purpose: "Community Panchayat Verification Audit (Wardha Water Council)",
+    txHash: "0xad64e7005533ff446611778899aabbccddeeff00112233445566778899aabb",
+    status: "RELEASED",
+    timestamp: "2026-10-25 13:00:00 UTC",
+    block: 20491880,
+    taxReceiptId: "80G-2026-406006",
+  },
   {
     id: "DON-901",
     donor: "0x71C9...b901",
@@ -105,41 +209,6 @@ const INITIAL_TRANSACTIONS: LedgerTransaction[] = [
     timestamp: "2026-10-24 10:15:00 UTC",
     block: 20491823,
     taxReceiptId: "80G-2026-990142",
-  },
-  {
-    id: "DON-902",
-    donor: "priya.sharma@okaxis",
-    donorFull: "priya.sharma@okaxis",
-    amount: "₹25,000",
-    amountEth: 0.0928,
-    amountUsd: 297.08,
-    amountInr: 25000.0,
-    rail: "UPI",
-    token: "INR_MINTED_USDC",
-    purpose: seedData.campaign.name,
-    txHash: "0x44b912aaccdd00112233445566778899aabbccddeeff00112233445566778899",
-    status: "LOCKED_IN_ESCROW",
-    timestamp: "2026-10-25 08:30:00 UTC",
-    block: 20491839,
-    utrNumber: "UTR-2026-881290",
-    taxReceiptId: "80G-2026-881290",
-  },
-  {
-    id: "DON-903",
-    donor: "0x4E21...a391",
-    donorFull: "0x4E21Fa387B67B543D75e3Ea2E59E50Eb147Ea391",
-    amount: "2,500 USDC",
-    amountEth: 0.78125,
-    amountUsd: 2500.0,
-    amountInr: 210375.0,
-    rail: "CRYPTO",
-    token: "USDC",
-    purpose: "Solar Fluoride Filtration & Water ATM",
-    txHash: "0x9c1029384756ab1029384756ab1029384756ab1029384756ab1029384756ab10",
-    status: "LOCKED_IN_ESCROW",
-    timestamp: "2026-10-25 11:45:00 UTC",
-    block: 20491865,
-    taxReceiptId: "80G-2026-102938",
   },
 ];
 
@@ -167,6 +236,9 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
   const [tranches, setTranches] = useState<TrancheState[]>(
     seedData.tranches as TrancheState[]
   );
+  const [trustScore, setTrustScore] = useState<number>(
+    seedData.escrowState.status === "FROZEN" ? 32 : 98
+  );
 
   const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
 
@@ -189,6 +261,11 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(parsed.tranches) && parsed.tranches.length > 0) {
           setTranches(parsed.tranches);
         }
+        if (typeof parsed.trustScore === "number") {
+          setTrustScore(parsed.trustScore);
+        } else if (parsed.escrowStatus === "FROZEN") {
+          setTrustScore(32);
+        }
       }
     } catch {
       // Ignore parse errors, fallback to seed
@@ -208,6 +285,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
           if (parsed.frozenReason !== undefined) setFrozenReason(parsed.frozenReason);
           if (Array.isArray(parsed.recentTxs)) setRecentTxs(parsed.recentTxs);
           if (Array.isArray(parsed.tranches)) setTranches(parsed.tranches);
+          if (typeof parsed.trustScore === "number") setTrustScore(parsed.trustScore);
+          else if (parsed.escrowStatus === "FROZEN") setTrustScore(32);
         } catch {
           // Ignore
         }
@@ -230,12 +309,13 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         frozenReason,
         recentTxs,
         tranches,
+        trustScore,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch {
       // Storage unavailable or full
     }
-  }, [isLoadedFromStorage, totalDonated, vaultBalance, releasedAmount, escrowStatus, frozenReason, recentTxs, tranches]);
+  }, [isLoadedFromStorage, totalDonated, vaultBalance, releasedAmount, escrowStatus, frozenReason, recentTxs, tranches, trustScore]);
 
   // 1. Add Donation Action (Wiring Donate ➔ Escrow ➔ DAG ➔ Feed)
   const addDonation = useCallback(
@@ -385,6 +465,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
           return t;
         })
       );
+      setTrustScore(99);
     },
     []
   );
@@ -394,6 +475,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     (reason: string, offendingTxHash?: string) => {
       setEscrowStatus("FROZEN");
       setFrozenReason(reason);
+      setTrustScore(32);
 
       const freezeTx: LedgerTransaction = {
         id: `FREEZE-${Date.now().toString().slice(-4)}`,
@@ -423,6 +505,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
   const unfreezeEscrow = useCallback(() => {
     setEscrowStatus("ACTIVE");
     setFrozenReason(null);
+    setTrustScore(98);
   }, []);
 
   // 5. Reset to Baseline Seed State
@@ -432,6 +515,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     setReleasedAmount(seedData.financials.totalReleasedEth);
     setEscrowStatus(seedData.escrowState.status as "ACTIVE" | "FROZEN");
     setFrozenReason(null);
+    setTrustScore(98);
     setRecentTxs(INITIAL_TRANSACTIONS);
     setTranches(seedData.tranches as TrancheState[]);
 
@@ -458,6 +542,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     freezeEscrow,
     unfreezeEscrow,
     resetToBaseline,
+    trustScore,
+    setTrustScore,
   };
 
   return (
