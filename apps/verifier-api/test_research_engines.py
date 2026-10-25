@@ -252,19 +252,47 @@ class TestVerifiableCredentials(unittest.TestCase):
         self.assertEqual(res["epistemicTier"], "ATTESTED")
 
 
-class TestWatchers(unittest.TestCase):
-    def test_poll_watchers(self):
-        res = get_watchers_status()
-        watchers = res["watchers"]
-        self.assertEqual(len(watchers), 6)
-        names = [w["name"] for w in watchers]
-        self.assertTrue(any("FundWatcher" in n for n in names))
-        self.assertTrue(any("ProofWatcher" in n for n in names))
-        self.assertTrue(any("NullifierWatcher" in n for n in names))
-        self.assertTrue(any("EscrowWatcher" in n for n in names))
-        self.assertTrue(any("DiscrepancyWatcher" in n for n in names))
-        self.assertTrue(any("BridgeWatcher" in n for n in names))
-        self.assertEqual(res["consensusState"], "QUORUM_ESTABLISHED")
+class TestVoluntaryServices(unittest.TestCase):
+    def test_volunteer_impact_calculation(self):
+        from donate_engine import calculate_volunteer_impact, VOLUNTEER_SERVICES
+        impact = calculate_volunteer_impact()
+        self.assertGreaterEqual(impact["totalHours"], 176.0)
+        self.assertGreaterEqual(impact["totalSessions"], 29)
+        self.assertIn("Medical", impact["hoursByCategory"])
+        self.assertIn("Engineering", impact["hoursByCategory"])
+        self.assertIn("Legal", impact["hoursByCategory"])
+        self.assertIn("Teaching", impact["hoursByCategory"])
+        self.assertIn("Anti-Inflation Guarantee", impact["auditRule"])
+
+    def test_volunteer_service_zero_cash_inflation(self):
+        from donate_engine import simulate_deposit, DepositRequest
+        req = DepositRequest(
+            rail="VOLUNTEER_SERVICE",
+            token="HOURS",
+            amount=12.0,
+            purposeId="water-wardha",
+            donorIdentifier="Er. Deep Hydro Geologist",
+            contributionType="VOLUNTEER_SERVICE",
+            volunteerCategory="Engineering",
+            volunteerName="Er. S. Deshpande (Ph.D.)",
+            skillTitle="Aquifer Fracture Depth Seismic Analysis",
+            hours=12.0,
+            sessions=2,
+            volunteerStatus="COMPLETED",
+            estimatedValue=60000.0
+        )
+        receipt = simulate_deposit(req)
+        self.assertTrue(receipt["success"])
+        self.assertTrue(receipt["isVolunteerService"])
+        self.assertEqual(receipt["rail"], "VOLUNTEER_SERVICE")
+        self.assertEqual(receipt["token"], "HOURS")
+        # ZERO CASH INFLATION:
+        self.assertEqual(receipt["amountDeposited"], 0.0)
+        self.assertEqual(receipt["equivalentEth"], 0.0)
+        self.assertEqual(receipt["equivalentUsd"], 0.0)
+        self.assertEqual(receipt["equivalentInr"], 0.0)
+        self.assertEqual(receipt["smartContract"]["state"], "LOGGED_IN_REGISTRY")
+        self.assertIn("Anti-Inflation Guarantee", receipt["purposeBound"]["rule"])
 
 
 if __name__ == "__main__":

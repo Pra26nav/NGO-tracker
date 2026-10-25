@@ -370,6 +370,21 @@ export default function DashboardPage() {
 
   const [selectedGalleryReceipt, setSelectedGalleryReceipt] = useState<GalleryReceipt | null>(null);
 
+  // Feature 4: Voluntary Services (Time & Professional Skills) State
+  const [volunteerCategoryFilter, setVolunteerCategoryFilter] = useState<string>("ALL");
+  const [volunteerStatusFilter, setVolunteerStatusFilter] = useState<string>("ALL");
+  const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState<boolean>(false);
+  const [volName, setVolName] = useState<string>("Dr. Neha Kulkarni");
+  const [volRef, setVolRef] = useState<string>("MCI-2017-88291");
+  const [volCategory, setVolCategory] = useState<"Medical" | "Legal" | "Teaching" | "Engineering" | "Other">("Medical");
+  const [volSkill, setVolSkill] = useState<string>("Pediatric Fluorosis Screening Camp");
+  const [volHours, setVolHours] = useState<number>(24);
+  const [volSessions, setVolSessions] = useState<number>(4);
+  const [volStatus, setVolStatus] = useState<"PLANNED" | "COMPLETED">("COMPLETED");
+  const [volRate, setVolRate] = useState<number>(5000);
+  const [volNotes, setVolNotes] = useState<string>("Screened 450 school children in Wardha district for fluoride dental & skeletal effects");
+  const [volSubmitting, setVolSubmitting] = useState<boolean>(false);
+
   // Fetch Dashboard State from API
   const fetchState = useCallback(async () => {
     if (isDemoSafeMode()) {
@@ -692,6 +707,91 @@ export default function DashboardPage() {
   const releasedPct = campaign.totalDepositedEth > 0
     ? Math.round((campaign.totalReleasedEth / campaign.totalDepositedEth) * 100)
     : 0;
+
+  // Filter volunteer service records by domain category and status
+  const filteredVolunteerServices = useMemo(() => {
+    return (ledger.volunteerServices || []).filter((rec) => {
+      const matchesCat =
+        volunteerCategoryFilter === "ALL" || rec.category === volunteerCategoryFilter;
+      const matchesStatus =
+        volunteerStatusFilter === "ALL" || rec.status === volunteerStatusFilter;
+      return matchesCat && matchesStatus;
+    });
+  }, [ledger.volunteerServices, volunteerCategoryFilter, volunteerStatusFilter]);
+
+  // Handle logging new volunteer service
+  const handleLogVolunteerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!volName || volHours <= 0) return;
+    setVolSubmitting(true);
+
+    const estValInr = volHours * volRate;
+    const estValUsd = Math.round(estValInr / 84.15);
+
+    try {
+      await fetch("http://127.0.0.1:8000/api/donate/log-volunteer-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          volunteerName: volName,
+          volunteerRef: volRef,
+          category: volCategory,
+          skillTitle: volSkill,
+          hours: volHours,
+          sessions: volSessions,
+          status: volStatus,
+          estimatedHourlyRateInr: volRate,
+          estimatedTotalValueInr: estValInr,
+          estimatedTotalValueUsd: estValUsd,
+          notes: volNotes,
+        }),
+      });
+    } catch {
+      // Local context fallback
+    }
+
+    ledger.logVolunteerService({
+      volunteerName: volName,
+      volunteerRef: volRef,
+      category: volCategory,
+      skillTitle: volSkill,
+      hours: volHours,
+      sessions: volSessions,
+      status: volStatus,
+      estimatedHourlyRateInr: volRate,
+      estimatedTotalValueInr: estValInr,
+      estimatedTotalValueUsd: estValUsd,
+      notes: volNotes,
+    });
+
+    setVolSubmitting(false);
+    setIsVolunteerModalOpen(false);
+  };
+
+  // Feature 4: Safe Impact Metrics
+  const volImpact = ledger.volunteerImpact;
+  const totalVolHours = volImpact?.totalHours ?? 176;
+  const completedVolHours = volImpact?.completedHours ?? 140;
+  const plannedVolHours = volImpact?.plannedHours ?? 36;
+  const totalVolSessions = volImpact?.totalSessions ?? 29;
+  const totalSpecialists = volImpact?.uniqueVolunteers ?? volImpact?.totalVolunteers ?? 6;
+  const totalVolValInr = volImpact?.estimatedValueInr ?? volImpact?.estimatedEconomicValueInr ?? 816000;
+  const totalVolValUsd = volImpact?.estimatedValueUsd ?? Math.round(volImpact?.estimatedEconomicValueUsd ?? 9697);
+
+  const medHours = volImpact?.byCategory?.Medical?.hours ?? volImpact?.hoursByCategory?.Medical ?? 68;
+  const engHours = volImpact?.byCategory?.Engineering?.hours ?? volImpact?.hoursByCategory?.Engineering ?? 52;
+  const teachHours = volImpact?.byCategory?.Teaching?.hours ?? volImpact?.hoursByCategory?.Teaching ?? 32;
+  const legHours = volImpact?.byCategory?.Legal?.hours ?? volImpact?.hoursByCategory?.Legal ?? 24;
+
+  const medSessions = volImpact?.byCategory?.Medical?.sessions ?? volImpact?.sessionsByCategory?.Medical ?? 11;
+  const engSessions = volImpact?.byCategory?.Engineering?.sessions ?? volImpact?.sessionsByCategory?.Engineering ?? 8;
+  const teachSessions = volImpact?.byCategory?.Teaching?.sessions ?? volImpact?.sessionsByCategory?.Teaching ?? 6;
+  const legSessions = volImpact?.byCategory?.Legal?.sessions ?? volImpact?.sessionsByCategory?.Legal ?? 4;
+
+  const medValInr = volImpact?.byCategory?.Medical?.estimatedValueInr ?? (medHours * 5000);
+  const engValInr = volImpact?.byCategory?.Engineering?.estimatedValueInr ?? (engHours * 5000);
+  const teachValInr = volImpact?.byCategory?.Teaching?.estimatedValueInr ?? (teachHours * 3000);
+  const legValInr = volImpact?.byCategory?.Legal?.estimatedValueInr ?? (legHours * 5000);
 
   return (
     <div className="min-h-screen bg-[#020617] text-[#f1f5f9] grid-bg">
@@ -1194,6 +1294,387 @@ export default function DashboardPage() {
         <CharityIntelligenceDrawer className="mt-6" />
 
         {/* ╔══════════════════════════════════════════════════╗
+            ║  FEATURE 4: VOLUNTARY SERVICES (TIME & SKILLS)   ║
+            ╚══════════════════════════════════════════════════╝ */}
+        <section
+          id="volunteer-impact-section"
+          className="glass rounded-2xl p-6 border border-slate-800 bg-[#0d1424]/85 space-y-6 shadow-2xl relative overflow-hidden"
+        >
+          {/* Header & Badges */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-2xl">🤝</span>
+                <h3 className="text-lg font-black text-white tracking-wide flex items-center gap-2">
+                  <span>Voluntary Services (Time &amp; Professional Skills)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 uppercase">
+                    Feature #4
+                  </span>
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400">
+                Tracking pro-bono specialist human capital (Medical, Engineering, Legal, Teaching). Contributed hours directly empower rural water and sanitation infrastructure.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <div
+                id="volunteer-total-hours-badge"
+                className="px-3.5 py-1.5 rounded-xl bg-violet-500/20 border border-violet-500/40 text-violet-300 text-xs font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(139,92,246,0.25)]"
+              >
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                <span>⏱️ {totalVolHours} Contributed Professional Hours</span>
+              </div>
+
+              <button
+                type="button"
+                id="open-volunteer-modal-btn"
+                onClick={() => setIsVolunteerModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30 border border-indigo-400"
+              >
+                <span>➕</span>
+                <span>Log Volunteer Service</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CRITICAL ANTI-INFLATION GUARANTEE NOTICE */}
+          <div
+            id="volunteer-anti-inflation-banner"
+            className="p-4 rounded-xl bg-violet-950/30 border border-violet-500/30 text-violet-200 text-xs space-y-2 relative overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-bold flex items-center gap-2 text-sm text-violet-300">
+                <span>🛡️</span>
+                <span>Anti-Inflation Policy Guarantee: Zero Cash Inflation Enforced</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold shrink-0">
+                ✓ Cash Escrow Unaltered
+              </span>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              In accordance with transparent NGO governance, voluntary professional services are audited strictly in <strong>contributed hours and completed sessions</strong>. The estimated pro-bono economic value (<strong>₹{totalVolValInr.toLocaleString("en-IN")} / ${totalVolValUsd.toLocaleString()} USD</strong>) is recorded exclusively for donor impact transparency and is <strong>never inflated into cash totals, vault balances, or milestone escrow disbursements</strong>.
+            </p>
+          </div>
+
+          {/* 4-Card Impact Metric Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Contributed Hours */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1 relative group hover:border-violet-500/50 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Contributed Hours</span>
+                <span className="text-base">⏱️</span>
+              </div>
+              <div className="text-2xl font-black text-white font-mono">
+                {totalVolHours} <span className="text-xs font-sans text-violet-400 font-bold">hrs</span>
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pt-0.5">
+                <span className="text-emerald-400 font-semibold">{completedVolHours}h completed</span>
+                <span>·</span>
+                <span className="text-amber-400 font-semibold">{plannedVolHours}h planned</span>
+              </div>
+            </div>
+
+            {/* Card 2: Specialized Sessions */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1 relative group hover:border-indigo-500/50 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Specialized Sessions</span>
+                <span className="text-base">📋</span>
+              </div>
+              <div className="text-2xl font-black text-indigo-300 font-mono">
+                {totalVolSessions} <span className="text-xs font-sans text-slate-400 font-bold">Sessions</span>
+              </div>
+              <div className="text-[11px] text-slate-400 pt-0.5">
+                Direct field clinics, surveys &amp; audits
+              </div>
+            </div>
+
+            {/* Card 3: Verified Specialists */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1 relative group hover:border-sky-500/50 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Verified Specialists</span>
+                <span className="text-base">🧑‍⚕️</span>
+              </div>
+              <div className="text-2xl font-black text-sky-300 font-mono">
+                {totalSpecialists} <span className="text-xs font-sans text-slate-400 font-bold">Professionals</span>
+              </div>
+              <div className="text-[11px] text-slate-400 pt-0.5">
+                Accredited Doctors, Engineers &amp; Counsel
+              </div>
+            </div>
+
+            {/* Card 4: Pro-Bono Valuation (Segregated from Cash) */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1 relative group hover:border-emerald-500/50 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Audited Pro-Bono Valuation</span>
+                <span className="text-base">💎</span>
+              </div>
+              <div className="text-2xl font-black text-emerald-400 font-mono">
+                ₹{(totalVolValInr / 100000).toFixed(2)}L
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
+                <span>${totalVolValUsd.toLocaleString()} USD</span>
+                <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Segregated
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Domain Breakdown Bars (Medical, Engineering, Teaching, Legal) */}
+          <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+              <span className="font-bold text-slate-200 uppercase font-mono tracking-wider text-[11px]">
+                Domain Distribution (Hours Contributed)
+              </span>
+              <span className="text-slate-400 text-[11px]">
+                Medical ({medHours}h) · Engineering ({engHours}h) · Teaching ({teachHours}h) · Legal ({legHours}h)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              {/* Medical */}
+              <div className="p-3 rounded-lg bg-slate-900/90 border border-rose-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-300 flex items-center gap-1.5">
+                    <span>🩺</span> Medical
+                  </span>
+                  <span className="font-mono font-bold text-white">
+                    {medHours} hrs
+                  </span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-rose-500 h-full rounded-full"
+                    style={{
+                      width: `${totalVolHours > 0 ? (medHours / totalVolHours) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{medSessions} Sessions</span>
+                  <span>₹{medValInr.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+
+              {/* Engineering */}
+              <div className="p-3 rounded-lg bg-slate-900/90 border border-cyan-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-cyan-300 flex items-center gap-1.5">
+                    <span>⚡</span> Engineering
+                  </span>
+                  <span className="font-mono font-bold text-white">
+                    {engHours} hrs
+                  </span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-cyan-500 h-full rounded-full"
+                    style={{
+                      width: `${totalVolHours > 0 ? (engHours / totalVolHours) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{engSessions} Sessions</span>
+                  <span>₹{engValInr.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+
+              {/* Teaching */}
+              <div className="p-3 rounded-lg bg-slate-900/90 border border-violet-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-violet-300 flex items-center gap-1.5">
+                    <span>🎓</span> Teaching
+                  </span>
+                  <span className="font-mono font-bold text-white">
+                    {teachHours} hrs
+                  </span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-violet-500 h-full rounded-full"
+                    style={{
+                      width: `${totalVolHours > 0 ? (teachHours / totalVolHours) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{teachSessions} Sessions</span>
+                  <span>₹{teachValInr.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+
+              {/* Legal */}
+              <div className="p-3 rounded-lg bg-slate-900/90 border border-amber-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                    <span>⚖️</span> Legal
+                  </span>
+                  <span className="font-mono font-bold text-white">
+                    {legHours} hrs
+                  </span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-amber-500 h-full rounded-full"
+                    style={{
+                      width: `${totalVolHours > 0 ? (legHours / totalVolHours) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{legSessions} Sessions</span>
+                  <span>₹{legValInr.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Pills & Interactive Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            {/* Domain Filter Pills */}
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 text-xs flex-wrap">
+              {["ALL", "Medical", "Engineering", "Teaching", "Legal"].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  id={`filter-vol-${cat.toLowerCase()}-btn`}
+                  onClick={() => setVolunteerCategoryFilter(cat)}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                    volunteerCategoryFilter === cat
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {cat === "ALL" ? "All Domains" : cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              {["ALL", "COMPLETED", "PLANNED"].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  id={`filter-vol-status-${st.toLowerCase()}-btn`}
+                  onClick={() => setVolunteerStatusFilter(st)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                    volunteerStatusFilter === st
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {st === "ALL" ? "All Status" : st === "COMPLETED" ? "Completed" : "Planned"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid of Contributed Volunteer Service Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredVolunteerServices.map((vol) => {
+              const isCompleted = vol.status === "COMPLETED";
+              const categoryColor =
+                vol.category === "Medical"
+                  ? "border-rose-500/30 bg-rose-950/10 text-rose-300"
+                  : vol.category === "Engineering"
+                  ? "border-cyan-500/30 bg-cyan-950/10 text-cyan-300"
+                  : vol.category === "Teaching"
+                  ? "border-violet-500/30 bg-violet-950/10 text-violet-300"
+                  : "border-amber-500/30 bg-amber-950/10 text-amber-300";
+
+              const categoryIcon =
+                vol.category === "Medical"
+                  ? "🩺"
+                  : vol.category === "Engineering"
+                  ? "⚡"
+                  : vol.category === "Teaching"
+                  ? "🎓"
+                  : "⚖️";
+
+              return (
+                <div
+                  key={vol.id}
+                  id={`volunteer-card-${vol.id}`}
+                  className="bg-slate-900/80 rounded-xl border border-slate-800/80 hover:border-violet-500/50 p-4 space-y-3 transition-all hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    {/* Top Row: Category Pill & Status Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border flex items-center gap-1 ${categoryColor}`}>
+                        <span>{categoryIcon}</span>
+                        <span>{vol.category}</span>
+                      </span>
+
+                      <span
+                        className={`text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider ${
+                          isCompleted
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                        }`}
+                      >
+                        {isCompleted ? "✓ COMPLETED" : "⏳ PLANNED"}
+                      </span>
+                    </div>
+
+                    {/* Specialist Name & Reference */}
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-1">{vol.volunteerName}</h4>
+                      <div className="text-[11px] font-mono text-slate-400 truncate">
+                        Ref: <span className="text-indigo-300">{vol.volunteerRef}</span>
+                      </div>
+                    </div>
+
+                    {/* Mission / Skill Title */}
+                    <div className="text-xs text-slate-200 font-semibold bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 line-clamp-2">
+                      {vol.skillTitle}
+                    </div>
+
+                    {/* Notes */}
+                    {vol.notes && (
+                      <p className="text-[11px] text-slate-400 line-clamp-2 italic">
+                        &ldquo;{vol.notes}&rdquo;
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Quantitative Hours, Sessions & Valuation */}
+                  <div className="pt-3 border-t border-slate-800/80 space-y-1.5 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Contributed Hours:</span>
+                      <span className="font-bold text-violet-300">{vol.hours} hrs ({vol.sessions} sessions)</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Pro-Bono Valuation:</span>
+                      <span className="font-bold text-emerald-400">
+                        ₹{(vol.estimatedTotalValueInr ?? 0).toLocaleString("en-IN")}{" "}
+                        <span className="text-[10px] text-slate-500">(${vol.estimatedTotalValueUsd ?? 0})</span>
+                      </span>
+                    </div>
+
+                    {vol.verificationHash && (
+                      <div className="pt-1 flex items-center justify-between text-[10px] text-slate-500 truncate">
+                        <span className="truncate">Hash: {vol.verificationHash.slice(0, 16)}…</span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(vol.verificationHash!)}
+                          className="text-slate-400 hover:text-white ml-1"
+                        >
+                          {copiedText === vol.verificationHash ? "✓" : "Copy"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ╔══════════════════════════════════════════════════╗
             ║  B. MILESTONE TRANCHE & DRIP-RELEASE WORKFLOW    ║
             ╚══════════════════════════════════════════════════╝ */}
         <section className="glass rounded-2xl p-6 border border-slate-800 space-y-4">
@@ -1651,6 +2132,205 @@ export default function DashboardPage() {
                 Close Preview
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ╔══════════════════════════════════════════════════╗
+          ║  MODAL: LOG VOLUNTEER SERVICE (FEATURE 4)        ║
+          ╚══════════════════════════════════════════════════╝ */}
+      {isVolunteerModalOpen && (
+        <div
+          id="volunteer-service-modal"
+          className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
+        >
+          <div className="glass-elevated bg-[#0d1424] border border-violet-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🤝</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">Log Pro-Bono Voluntary Service</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">Time &amp; Professional Skills Impact Registry</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVolunteerModalOpen(false)}
+                className="text-slate-400 hover:text-white text-lg p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Anti-Inflation Reminder */}
+            <div className="p-3 rounded-xl bg-violet-950/40 border border-violet-500/30 text-[11px] text-violet-200 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-violet-300">
+                <span>🛡️</span>
+                <span>Anti-Inflation Notice</span>
+              </div>
+              <p className="text-slate-300 leading-relaxed">
+                Contributed hours are logged for professional impact tracking. The calculated market value is never inflated into cash totals or escrow balances.
+              </p>
+            </div>
+
+            <form onSubmit={handleLogVolunteerSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Domain Category:</label>
+                  <select
+                    value={volCategory}
+                    onChange={(e) => {
+                      const cat = e.target.value as any;
+                      setVolCategory(cat);
+                      if (cat === "Medical") setVolRate(5000);
+                      else if (cat === "Legal") setVolRate(5000);
+                      else if (cat === "Engineering") setVolRate(5000);
+                      else if (cat === "Teaching") setVolRate(3000);
+                      else setVolRate(2500);
+                    }}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-violet-500"
+                  >
+                    <option value="Medical">🩺 Medical (Doctors, Nurses, Clinics)</option>
+                    <option value="Engineering">⚡ Engineering (Hydrology, Solar, Civil)</option>
+                    <option value="Legal">⚖️ Legal (Compliance, Land, Contracts)</option>
+                    <option value="Teaching">🎓 Teaching (Hygiene, Sanitation, Training)</option>
+                    <option value="Other">💼 Other (Specialist Services)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Service Status:</label>
+                  <select
+                    value={volStatus}
+                    onChange={(e) => setVolStatus(e.target.value as any)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-violet-500"
+                  >
+                    <option value="COMPLETED">✓ COMPLETED (Executed &amp; Audited)</option>
+                    <option value="PLANNED">⏳ PLANNED (Pledged Deployment)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Specialist Name:</label>
+                  <input
+                    type="text"
+                    required
+                    value={volName}
+                    onChange={(e) => setVolName(e.target.value)}
+                    placeholder="e.g. Dr. Sunita Rao"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  >
+                  </input>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">License / Reg Ref:</label>
+                  <input
+                    type="text"
+                    required
+                    value={volRef}
+                    onChange={(e) => setVolRef(e.target.value)}
+                    placeholder="e.g. MCI-2017-88291"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-violet-500"
+                  >
+                  </input>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">Specialized Mission / Skill Title:</label>
+                <input
+                  type="text"
+                  required
+                  value={volSkill}
+                  onChange={(e) => setVolSkill(e.target.value)}
+                  placeholder="e.g. Pediatric Fluorosis Screening Camp"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                >
+                </input>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Hours:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={volHours}
+                    onChange={(e) => setVolHours(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-violet-500"
+                  >
+                  </input>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Sessions:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={volSessions}
+                    onChange={(e) => setVolSessions(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-violet-500"
+                  >
+                  </input>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Rate (₹/hr):</label>
+                  <input
+                    type="number"
+                    min="500"
+                    step="500"
+                    value={volRate}
+                    onChange={(e) => setVolRate(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-violet-500"
+                  >
+                  </input>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between font-mono text-[11px]">
+                <span className="text-slate-400">Calculated Pro-Bono Value:</span>
+                <span className="text-emerald-400 font-bold">
+                  ₹{(volHours * volRate).toLocaleString("en-IN")}{" "}
+                  <span className="text-slate-400 font-normal">
+                    (≈ ${Math.round((volHours * volRate) / 84.15).toLocaleString()} USD)
+                  </span>
+                </span>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">Field Audit Notes:</label>
+                <textarea
+                  rows={2}
+                  value={volNotes}
+                  onChange={(e) => setVolNotes(e.target.value)}
+                  placeholder="Clinical screenings, technical drawings, or community hygiene sessions details…"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsVolunteerModalOpen(false)}
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={volSubmitting}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-violet-600/30 flex items-center gap-1.5"
+                >
+                  {volSubmitting ? "Logging…" : "✓ Log Volunteer Service"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -51,7 +51,7 @@ import {
 /* ────────────────────────────────────────────────────────────
    Types & Models
 ──────────────────────────────────────────────────────────── */
-export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER";
 type FiatCurrency = "INR" | "USD" | "EUR" | "GBP";
 type CryptoToken = "ETH" | "USDC";
 type FiatPaymentMethod = "UPI" | "CARD" | "BANK";
@@ -406,8 +406,8 @@ const INITIAL_RECENT_DONATIONS: RecentDonation[] = [
    Main Component
 ──────────────────────────────────────────────────────────── */
 export default function DonatePage() {
-  // Navigation Tabs: Fiat vs. Crypto vs. Non-Cash (Goods, Food, Medical, Other)
-  const [activeRail, setActiveRail] = useState<"FIAT" | "CRYPTO" | "NON_CASH">("FIAT");
+  // Navigation Tabs: Fiat vs. Crypto vs. Non-Cash vs. Voluntary Services (Feature 4)
+  const [activeRail, setActiveRail] = useState<"FIAT" | "CRYPTO" | "NON_CASH" | "VOLUNTEER">("FIAT");
 
   // Tab 1: Fiat State
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>("INR");
@@ -426,6 +426,17 @@ export default function DonatePage() {
   const [nonCashCurrency, setNonCashCurrency] = useState<"USD" | "INR">("USD");
   const [deliveryHub, setDeliveryHub] = useState<string>("Maharashtra Central Logistics Hub #4 — Wardha Cluster");
   const [expandedInventoryId, setExpandedInventoryId] = useState<string | null>(null);
+
+  // Tab 4: Voluntary Services State (Feature 4 - Time & Professional Skills)
+  const [volCategory, setVolCategory] = useState<"Medical" | "Legal" | "Teaching" | "Engineering" | "Other">("Medical");
+  const [volName, setVolName] = useState<string>("Dr. Arvind Joshi");
+  const [volRef, setVolRef] = useState<string>("MCI-2015-44912");
+  const [volSkill, setVolSkill] = useState<string>("Rural Medical Camp & Waterborne Diagnostics");
+  const [volHours, setVolHours] = useState<number>(20);
+  const [volSessions, setVolSessions] = useState<number>(3);
+  const [volStatus, setVolStatus] = useState<"PLANNED" | "COMPLETED">("PLANNED");
+  const [volHourlyRate, setVolHourlyRate] = useState<number>(5000);
+  const [volNotes, setVolNotes] = useState<string>("General practitioner consultation & diagnostic services for 3 rural clinics");
 
   // Web3 & Wagmi Context
   const web3 = useWeb3();
@@ -454,7 +465,7 @@ export default function DonatePage() {
   const usdcBalance = 12450.0;
 
   // Connect to shared global ledger context
-  const { totalDonated, vaultBalance, tranches, escrowStatus, recentTxs, addDonation } = useLedger();
+  const { totalDonated, vaultBalance, tranches, escrowStatus, recentTxs, addDonation, logVolunteerService } = useLedger();
 
   // General State
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -507,10 +518,13 @@ export default function DonatePage() {
 
     const isCrypto = activeRail === "CRYPTO";
     const isNonCash = activeRail === "NON_CASH";
-    const depositAmount = isNonCash ? nonCashQuantity : isCrypto ? cryptoAmount : fiatAmount;
-    const tokenSymbol = isNonCash ? nonCashUnit.toUpperCase() : isCrypto ? cryptoToken : selectedCurrency;
-    const donorId = isCrypto && web3.isConnected ? connectedAddress : donorName;
-    const utrGen = !isCrypto && !isNonCash ? `UTR-2026-${Math.floor(100000 + Math.random() * 900000)}` : null;
+    const isVolunteer = activeRail === "VOLUNTEER";
+    const depositAmount = isVolunteer ? volHours : isNonCash ? nonCashQuantity : isCrypto ? cryptoAmount : fiatAmount;
+    const tokenSymbol = isVolunteer ? "HOURS" : isNonCash ? nonCashUnit.toUpperCase() : isCrypto ? cryptoToken : selectedCurrency;
+    const donorId = isVolunteer ? volName : isCrypto && web3.isConnected ? connectedAddress : donorName;
+    const utrGen = !isCrypto && !isNonCash && !isVolunteer ? `UTR-2026-${Math.floor(100000 + Math.random() * 900000)}` : null;
+    const volEstValInr = volHours * volHourlyRate;
+    const volEstValUsd = Math.round(volEstValInr / 84.15);
 
     // Simulate Off-Chain IPFS CID Hash for heavy receipts/audit manifest
     const randomHex = Math.random().toString(16).substring(2, 10);
@@ -577,22 +591,45 @@ export default function DonatePage() {
       setIsConfirming(false);
       setToastNotification((prev) => prev ? { ...prev, confirmations: 12, status: "FINALIZED" } : null);
 
-      // Record into global shared state store
+      // If volunteer contribution, log directly to volunteer services registry
+      if (isVolunteer) {
+        logVolunteerService({
+          volunteerName: volName,
+          volunteerRef: volRef,
+          category: volCategory,
+          skillTitle: volSkill,
+          hours: volHours,
+          sessions: volSessions,
+          status: volStatus,
+          estimatedHourlyRateInr: volHourlyRate,
+          estimatedTotalValueInr: volEstValInr,
+          estimatedTotalValueUsd: volEstValUsd,
+          notes: volNotes,
+        });
+      }
+
+      // Record into global shared state store (amount is 0.0 for volunteer to guarantee zero cash inflation)
       const recordedTx = addDonation({
-        donorIdentifier: isCrypto && web3.isConnected ? connectedAddress : donorName,
-        donorName: donorName,
-        amount: depositAmount,
-        rail: isNonCash ? "IN_KIND_LOGISTICS" : isCrypto ? "CRYPTO" : "UPI",
+        donorIdentifier: isCrypto && web3.isConnected ? connectedAddress : donorId,
+        donorName: isVolunteer ? volName : donorName,
+        amount: isVolunteer ? 0.0 : depositAmount,
+        rail: isVolunteer ? "VOLUNTEER_HOURS" : isNonCash ? "IN_KIND_LOGISTICS" : isCrypto ? "CRYPTO" : "UPI",
         token: tokenSymbol,
         purposeName: ACTIVE_CAMPAIGN.name,
         utrNumber: utrGen,
         donorEmail,
         donorTaxId,
-        contributionType: isNonCash ? nonCashType : "MONEY",
+        contributionType: isVolunteer ? "VOLUNTEER_SERVICE" : isNonCash ? nonCashType : "MONEY",
         itemName: isNonCash ? nonCashItemName : undefined,
         quantity: isNonCash ? nonCashQuantity : undefined,
         unit: isNonCash ? nonCashUnit : undefined,
-        estimatedValue: isNonCash ? nonCashEstimatedValue : undefined,
+        estimatedValue: isVolunteer ? volEstValUsd : isNonCash ? nonCashEstimatedValue : undefined,
+        volunteerCategory: isVolunteer ? volCategory : undefined,
+        volunteerName: isVolunteer ? volName : undefined,
+        volunteerRef: isVolunteer ? volRef : undefined,
+        hours: isVolunteer ? volHours : undefined,
+        sessions: isVolunteer ? volSessions : undefined,
+        volunteerStatus: isVolunteer ? volStatus : undefined,
         inventory: isNonCash ? {
           pledged: nonCashQuantity,
           received: nonCashQuantity,
@@ -608,7 +645,21 @@ export default function DonatePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            isNonCash ? {
+            isVolunteer ? {
+              rail: "VOLUNTEER_HOURS",
+              token: "HOURS",
+              amount: 0.0,
+              purposeId: ACTIVE_CAMPAIGN.id,
+              donorIdentifier: donorId,
+              contributionType: "VOLUNTEER_SERVICE",
+              volunteerCategory: volCategory,
+              volunteerName: volName,
+              volunteerRef: volRef,
+              hours: volHours,
+              sessions: volSessions,
+              volunteerStatus: volStatus,
+              estimatedValue: volEstValUsd,
+            } : isNonCash ? {
               rail: "IN_KIND_LOGISTICS",
               token: nonCashUnit.toUpperCase(),
               amount: nonCashQuantity,
@@ -650,13 +701,21 @@ export default function DonatePage() {
             fiatCurrency: selectedCurrency,
             donorEmail,
             donorTaxId,
-            stablecoinLocked: isNonCash ? null : fiatEquivalentStablecoin,
+            stablecoinLocked: isNonCash || isVolunteer ? null : fiatEquivalentStablecoin,
             isNonCash,
-            contributionType: isNonCash ? nonCashType : "MONEY",
+            isVolunteer,
+            volunteerCategory: isVolunteer ? volCategory : null,
+            volunteerName: isVolunteer ? volName : null,
+            volunteerRef: isVolunteer ? volRef : null,
+            hours: isVolunteer ? volHours : null,
+            sessions: isVolunteer ? volSessions : null,
+            volunteerStatus: isVolunteer ? volStatus : null,
+            contributionType: isVolunteer ? "VOLUNTEER_SERVICE" : isNonCash ? nonCashType : "MONEY",
             itemName: isNonCash ? nonCashItemName : null,
             quantity: isNonCash ? nonCashQuantity : null,
             unit: isNonCash ? nonCashUnit : null,
-            estimatedValueUsd: isNonCash ? nonCashEstimatedValue : null,
+            estimatedValueUsd: isVolunteer ? volEstValUsd : isNonCash ? nonCashEstimatedValue : null,
+            estimatedValueInr: isVolunteer ? volEstValInr : null,
             inventory: isNonCash ? {
               pledged: nonCashQuantity,
               received: nonCashQuantity,
@@ -879,6 +938,23 @@ export default function DonatePage() {
                   <span>Non-Cash In-Kind</span>
                   <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
                     SUPPLIES
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  id="tab-volunteer-btn"
+                  onClick={() => setActiveRail("VOLUNTEER")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
+                    activeRail === "VOLUNTEER"
+                      ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)]"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <HeartHandshake className="w-3.5 h-3.5 text-violet-400" />
+                  <span>Voluntary Service</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-400/30">
+                    HOURS
                   </span>
                 </button>
               </div>
@@ -1296,7 +1372,7 @@ export default function DonatePage() {
                   )}
                 </button>
               </div>
-            ) : (
+            ) : activeRail === "NON_CASH" ? (
               /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                   TAB 3: NON-CASH IN-KIND SUPPLIES (GOODS, FOOD, MEDICAL, OTHER)
                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -1679,6 +1755,244 @@ export default function DonatePage() {
                   )}
                 </button>
               </div>
+            ) : (
+              /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  TAB 4: VOLUNTARY SERVICES (TIME & PROFESSIONAL SKILLS)
+                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+              <div className="space-y-6 animate-fade-in-up">
+                
+                {/* 1. Category Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Stethoscope className="w-4 h-4 text-violet-400" />
+                      1. Professional Skill Domain
+                    </label>
+                    <span className="text-[10px] font-mono text-violet-400 bg-violet-950/80 border border-violet-500/30 px-2 py-0.5 rounded-full font-bold">
+                      PRO-BONO SERVICES
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { cat: "Medical" as const, label: "Medical", icon: HeartPulse, desc: "Clinics, screening, hygiene", rate: 5000 },
+                      { cat: "Engineering" as const, label: "Engineering", icon: Zap, desc: "Aquifers, solar pumps, CAD", rate: 5000 },
+                      { cat: "Legal" as const, label: "Legal Counsel", icon: ShieldCheck, desc: "Water rights, FCRA, land", rate: 5000 },
+                      { cat: "Teaching" as const, label: "Teaching", icon: ClipboardList, desc: "Sanitation training, school", rate: 3000 },
+                    ].map(({ cat, label, icon: Icon, desc, rate }) => {
+                      const isSelected = volCategory === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          id={`vol-cat-select-${cat.toLowerCase()}`}
+                          onClick={() => {
+                            setVolCategory(cat);
+                            setVolHourlyRate(rate);
+                            if (cat === "Medical") {
+                              setVolSkill("Rural Medical Clinic & Waterborne Diagnostics");
+                              setVolRef("MCI-2015-44912");
+                            } else if (cat === "Engineering") {
+                              setVolSkill("Hydrogeological Aquifer Survey & Solar Pump Sizing");
+                              setVolRef("COA-CA-2016-4421");
+                            } else if (cat === "Legal") {
+                              setVolSkill("Water Resource Easement & Community Regulatory Filing");
+                              setVolRef("BAR-MAH-2011-841");
+                            } else {
+                              setVolSkill("Community Water Sanitation & Fluoride Safety Curriculum");
+                              setVolRef("UGC-NET-2018-9921");
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+                            isSelected
+                              ? "bg-violet-950/40 border-violet-500/70 shadow-[0_0_20px_rgba(139,92,246,0.25)]"
+                              : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                              isSelected
+                                ? "bg-violet-500/20 text-violet-400 border border-violet-500/40"
+                                : "bg-slate-800 text-slate-400"
+                            }`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
+                            )}
+                          </div>
+                          <div className="font-bold text-xs text-white">{label}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Specialist Profile & Credentials */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-violet-400" />
+                      2. Specialist Accreditation &amp; Mission Details
+                    </span>
+                    <span className="text-[10px] font-mono text-violet-400">CREDENTIAL AUDITED</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Specialist / Volunteer Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="vol-name-input"
+                        value={volName}
+                        onChange={(e) => setVolName(e.target.value)}
+                        placeholder="e.g. Dr. Sunita Rao (MD)"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-violet-500 font-medium text-xs transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Professional License / Registration Ref *
+                      </label>
+                      <input
+                        type="text"
+                        id="vol-ref-input"
+                        value={volRef}
+                        onChange={(e) => setVolRef(e.target.value)}
+                        placeholder="e.g. MCI-2015-44912 / BAR-MAH-2011"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-indigo-300 focus:outline-none focus:border-violet-500 font-mono text-xs transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-300 font-medium">
+                      Specialized Mission Scope / Skill Title *
+                    </label>
+                    <input
+                      type="text"
+                      id="vol-skill-input"
+                      value={volSkill}
+                      onChange={(e) => setVolSkill(e.target.value)}
+                      placeholder="e.g. Pediatric Fluorosis Screening Camp &amp; Health Clinics"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-violet-500 text-xs transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-300 font-medium">
+                      Deployment Notes &amp; Field Impact Summary
+                    </label>
+                    <textarea
+                      rows={2}
+                      id="vol-notes-input"
+                      value={volNotes}
+                      onChange={(e) => setVolNotes(e.target.value)}
+                      placeholder="Summary of services rendered, target beneficiaries, field clinic locations..."
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 focus:outline-none focus:border-violet-500 text-xs transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Hours, Sessions & Status */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-emerald-400" />
+                      3. Service Hours, Sessions &amp; Execution Status
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400">HOURLY ACCOUNTING</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Contributed Hours *
+                      </label>
+                      <input
+                        type="number"
+                        id="vol-hours-input"
+                        min="1"
+                        max="500"
+                        value={volHours}
+                        onChange={(e) => setVolHours(parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-violet-300 focus:outline-none focus:border-violet-500 font-mono font-bold text-sm transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Number of Sessions *
+                      </label>
+                      <input
+                        type="number"
+                        id="vol-sessions-input"
+                        min="1"
+                        max="50"
+                        value={volSessions}
+                        onChange={(e) => setVolSessions(parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-violet-500 font-mono font-bold text-sm transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-slate-300 font-medium">
+                        Execution Status *
+                      </label>
+                      <select
+                        id="vol-status-select"
+                        value={volStatus}
+                        onChange={(e) => setVolStatus(e.target.value as any)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-violet-500 font-medium text-xs transition-all"
+                      >
+                        <option value="COMPLETED">✓ COMPLETED (Executed &amp; Audited)</option>
+                        <option value="PLANNED">⏳ PLANNED (Pledged Deployment)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Valuation & Anti-Inflation Guarantee Callout */}
+                  <div className="p-4 rounded-2xl bg-violet-950/30 border border-violet-500/30 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-violet-300 font-bold flex items-center gap-1.5 font-mono text-[11px] uppercase">
+                        <span>🛡️</span> Zero Cash Inflation Guarantee
+                      </span>
+                      <span className="font-mono text-emerald-400 font-bold">
+                        ₹{(volHours * volHourlyRate).toLocaleString("en-IN")} / ${Math.round((volHours * volHourlyRate) / 84.15).toLocaleString()} USD Pro-Bono
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Estimated economic value is calculated at standard market benchmark (₹{volHourlyRate.toLocaleString("en-IN")}/hr) for philanthropic impact transparency. In strict compliance with the system rules, <strong className="text-violet-200">zero cash is added to vault balances or milestone escrow pools</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Submit Voluntary Service Hours */}
+                <button
+                  type="button"
+                  id="submit-volunteer-btn"
+                  onClick={handleExecuteDonation}
+                  disabled={isSubmitting || !volName || volHours <= 0}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm tracking-wide shadow-[0_0_25px_rgba(139,92,246,0.4)] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Logging Professional Service to Impact Ledger...</span>
+                    </>
+                  ) : (
+                    <>
+                      <HeartHandshake className="w-4 h-4 text-violet-200 group-hover:scale-110 transition-transform" />
+                      <span>Pledge &amp; Register {volHours} Voluntary Specialist Hours</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1781,13 +2095,15 @@ export default function DonatePage() {
 
               <div className="space-y-2">
                 {recentTxs.slice(0, 6).map((d) => {
-                  const isNonCash = d.contributionType && d.contributionType !== "MONEY";
+                  const isNonCash = d.contributionType && d.contributionType !== "MONEY" && d.contributionType !== "VOLUNTEER_SERVICE";
+                  const isVolunteer = d.contributionType === "VOLUNTEER_SERVICE";
                   const isExpanded = expandedInventoryId === d.id;
                   const typeColors: Record<string, { bg: string; text: string; border: string }> = {
                     MONEY: { bg: "bg-emerald-950/60", text: "text-emerald-400", border: "border-emerald-500/30" },
                     GOODS: { bg: "bg-amber-950/60", text: "text-amber-400", border: "border-amber-500/30" },
                     FOOD: { bg: "bg-orange-950/60", text: "text-orange-400", border: "border-orange-500/30" },
                     MEDICAL: { bg: "bg-rose-950/60", text: "text-rose-400", border: "border-rose-500/30" },
+                    VOLUNTEER_SERVICE: { bg: "bg-violet-950/60", text: "text-violet-400", border: "border-violet-500/30" },
                     OTHER: { bg: "bg-purple-950/60", text: "text-purple-400", border: "border-purple-500/30" },
                   };
                   const colorCfg = typeColors[d.contributionType || "MONEY"] || typeColors.MONEY;
@@ -1952,17 +2268,34 @@ export default function DonatePage() {
             {/* Header */}
             <div className="text-center space-y-2">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-lg ${
-                receiptData.isNonCash
+                receiptData.isVolunteer
+                  ? "bg-violet-500/20 border border-violet-500/40 text-violet-400 shadow-[0_0_20px_rgba(139,92,246,0.3)]"
+                  : receiptData.isNonCash
                   ? "bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
                   : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
               }`}>
-                {receiptData.isNonCash ? <Package className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                {receiptData.isVolunteer ? (
+                  <HeartHandshake className="w-8 h-8" />
+                ) : receiptData.isNonCash ? (
+                  <Package className="w-8 h-8" />
+                ) : (
+                  <CheckCircle2 className="w-8 h-8" />
+                )}
               </div>
               <h3 className="text-xl font-black text-white">
-                {receiptData.isNonCash ? "In-Kind Manifest Committed" : "Donation Successfully Locked"}
+                {receiptData.isVolunteer
+                  ? "Voluntary Service Registered"
+                  : receiptData.isNonCash
+                  ? "In-Kind Manifest Committed"
+                  : "Donation Successfully Locked"}
               </h3>
               <p className="text-xs text-slate-400">
-                {receiptData.isNonCash ? (
+                {receiptData.isVolunteer ? (
+                  <>
+                    Pro-bono professional specialist contribution logged to the public impact registry.{" "}
+                    <span className="text-violet-300 font-semibold">Zero cash inflation enforced</span>.
+                  </>
+                ) : receiptData.isNonCash ? (
                   <>
                     Physical supply consignment registered with warehouse intake depot. Non-cash inventory is{" "}
                     <span className="text-amber-300 font-semibold">segregated from liquid cash pools</span>.
@@ -1992,7 +2325,70 @@ export default function DonatePage() {
                 </div>
               </div>
 
-              {receiptData.isNonCash ? (
+              {receiptData.isVolunteer ? (
+                <>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Contribution Type</span>
+                    <span className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-[10px] font-bold">
+                      VOLUNTEER_SERVICE (PRO-BONO)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Specialist Name</span>
+                    <span className="text-slate-200 font-bold truncate max-w-[200px]">
+                      {receiptData.volunteerName || volName}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">License / Reg Ref</span>
+                    <span className="text-indigo-300 font-mono font-bold">
+                      {receiptData.volunteerRef || volRef}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Domain Category</span>
+                    <span className="text-violet-300 font-bold">
+                      {receiptData.volunteerCategory || volCategory}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Hours &amp; Sessions</span>
+                    <span className="text-emerald-400 font-bold">
+                      {receiptData.hours || volHours} Hours ({receiptData.sessions || volSessions} Sessions)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Service Status</span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                      (receiptData.volunteerStatus || volStatus) === "COMPLETED"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}>
+                      {receiptData.volunteerStatus || volStatus}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-500">Pro-Bono Valuation</span>
+                    <span className="text-emerald-400 font-bold">
+                      ₹{(receiptData.estimatedValueInr || (volHours * volHourlyRate)).toLocaleString("en-IN")}{" "}
+                      <span className="text-slate-400 font-normal">
+                        (≈ ${(receiptData.estimatedValueUsd || Math.round((volHours * volHourlyRate) / 84.15)).toLocaleString()} USD)
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-violet-950/40 border border-violet-500/30 text-[10px] font-mono text-violet-300 flex items-center justify-between">
+                    <span>🛡️ Cash Accounting Rule</span>
+                    <span className="font-bold text-emerald-400">0.00 ETH Cash (Zero Inflation)</span>
+                  </div>
+                </>
+              ) : receiptData.isNonCash ? (
                 <>
                   <div className="flex items-center justify-between py-1 border-b border-slate-800">
                     <span className="text-slate-500">Contribution Type</span>

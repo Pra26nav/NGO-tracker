@@ -21,18 +21,18 @@ export interface LedgerTransaction {
   amountEth: number;
   amountUsd: number;
   amountInr: number;
-  rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
+  rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS" | "VOLUNTEER_SERVICE";
   token: string;
   purpose: string;
   txHash: string;
-  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE";
+  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE" | "LOGGED_IN_REGISTRY";
   timestamp: string;
   block: number;
   utrNumber?: string | null;
   donorTaxId?: string | null;
   taxReceiptId?: string | null;
   // Feature 1: Non-Cash In-Kind & Inventory Tracking
-  contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+  contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER";
   itemName?: string | null;
   quantity?: number | null;
   unit?: string | null;
@@ -44,6 +44,53 @@ export interface LedgerTransaction {
     damaged: number;
     remaining: number;
   } | null;
+  // Feature 4: Voluntary Services (Time & Professional Skills)
+  volunteerCategory?: "Medical" | "Legal" | "Teaching" | "Engineering" | "Other" | null;
+  volunteerName?: string | null;
+  volunteerRef?: string | null;
+  hours?: number | null;
+  sessions?: number | null;
+  volunteerStatus?: "PLANNED" | "COMPLETED" | null;
+}
+
+export type VolunteerCategory = "Medical" | "Legal" | "Teaching" | "Engineering" | "Other";
+export type VolunteerServiceStatus = "PLANNED" | "COMPLETED";
+
+export interface VolunteerServiceRecord {
+  id: string;
+  volunteerName: string;
+  volunteerRef?: string;
+  category: VolunteerCategory;
+  skillTitle: string;
+  hours: number;
+  sessions: number;
+  status: VolunteerServiceStatus;
+  estimatedValue: number;
+  estimatedValueCurrency: string;
+  hourlyRateEstimate?: number;
+  purposeId: string;
+  purposeName: string;
+  date: string;
+  verificationHash?: string;
+  verifiedBy?: string;
+  notes?: string;
+}
+
+export interface VolunteerImpactSummary {
+  totalHours: number;
+  completedHours: number;
+  plannedHours: number;
+  totalSessions: number;
+  totalVolunteers: number;
+  uniqueVolunteers?: number;
+  estimatedEconomicValueInr: number;
+  estimatedEconomicValueUsd: number;
+  estimatedValueInr?: number;
+  estimatedValueUsd?: number;
+  hoursByCategory: Record<VolunteerCategory, number>;
+  sessionsByCategory: Record<VolunteerCategory, number>;
+  byCategory?: Record<VolunteerCategory, { hours: number; sessions: number; estimatedValueInr: number; estimatedValueUsd: number }>;
+  auditRule: string;
 }
 
 export interface TrancheState {
@@ -79,13 +126,13 @@ export interface LedgerContextValue {
     donorIdentifier?: string;
     donorName?: string;
     amount: number;
-    rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
+    rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS" | "VOLUNTEER_SERVICE";
     token: string;
     purposeName?: string;
     utrNumber?: string | null;
     donorEmail?: string;
     donorTaxId?: string;
-    contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+    contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER";
     itemName?: string;
     quantity?: number;
     unit?: string;
@@ -97,6 +144,13 @@ export interface LedgerContextValue {
       damaged: number;
       remaining: number;
     };
+    volunteerCategory?: VolunteerCategory;
+    volunteerName?: string;
+    volunteerRef?: string;
+    skillTitle?: string;
+    hours?: number;
+    sessions?: number;
+    volunteerStatus?: VolunteerServiceStatus;
   }) => LedgerTransaction;
   releaseTranche: (
     trancheId: number,
@@ -110,6 +164,21 @@ export interface LedgerContextValue {
   setTrustScore: (score: number) => void;
   statementFreshness: BankStatementFreshness;
   refreshStatement: (daysAgo?: number, reportingPeriod?: string) => Promise<void>;
+  volunteerServices: VolunteerServiceRecord[];
+  volunteerImpact: VolunteerImpactSummary;
+  logVolunteerService: (record: {
+    volunteerName: string;
+    category: VolunteerCategory;
+    skillTitle: string;
+    hours: number;
+    sessions?: number;
+    status?: VolunteerServiceStatus;
+    volunteerRef?: string;
+    hourlyRateEstimate?: number;
+    estimatedValue?: number;
+    purposeId?: string;
+    notes?: string;
+  }) => Promise<VolunteerServiceRecord>;
 }
 
 export interface BankStatementFreshness {
@@ -142,6 +211,158 @@ export const DEFAULT_STATEMENT_FRESHNESS: BankStatementFreshness = {
   accountNumberMasked: "•••• •••• •••• 9012",
   uploadedBy: "FinOps Officer (Anand Verma, CA)",
   auditRule: "RBI FCRA / Standard Philanthropic Audit Rule: Bank statements must be reconciled every 30 days.",
+};
+
+export const DEFAULT_VOLUNTEER_SERVICES: VolunteerServiceRecord[] = [
+  {
+    id: "VOL-001",
+    volunteerName: "Dr. Sunita Rao (MD)",
+    volunteerRef: "MCI-REG-2012-44102",
+    category: "Medical",
+    skillTitle: "Rural Fluorosis Screening & Pediatric Triage Health Camp",
+    hours: 48,
+    sessions: 8,
+    status: "COMPLETED",
+    hourlyRateEstimate: 5000,
+    estimatedValue: 240000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-18",
+    verificationHash: "0x4a18b7c29e0134df8921a4bc567890ef1234567890abcdef1234567890abcdef",
+    verifiedBy: "District Medical Officer & NGO Field Director",
+    notes: "Diagnostic screening of 312 children across 4 hamlets for early skeletal and dental fluorosis.",
+  },
+  {
+    id: "VOL-002",
+    volunteerName: "Er. Pradeep Patil (M.Tech, Civil)",
+    volunteerRef: "IEI-ENG-99881",
+    category: "Engineering",
+    skillTitle: "Hydrogeological Aquifer Mapping & Borewell Casing Structural Integrity",
+    hours: 36,
+    sessions: 6,
+    status: "COMPLETED",
+    hourlyRateEstimate: 5000,
+    estimatedValue: 180000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-21",
+    verificationHash: "0x7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234",
+    verifiedBy: "Chief Structural Consultant, Vidarbha Geoconsult",
+    notes: "Resistivity soundings and acoustic telemetry check on 3 deep borewells prior to pump lowering.",
+  },
+  {
+    id: "VOL-003",
+    volunteerName: "Adv. Rajesh Deshmukh",
+    volunteerRef: "BAR-MAH-2009-8812",
+    category: "Legal",
+    skillTitle: "Grampanchayat Water Rights Easement & Statutory FCRA Advisory",
+    hours: 24,
+    sessions: 4,
+    status: "COMPLETED",
+    hourlyRateEstimate: 5000,
+    estimatedValue: 120000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-22",
+    verificationHash: "0x11223344556677889900aabbccddeeff0011223344556677889900aabbccddee",
+    verifiedBy: "Legal Compliance Watchtower & Panchayat Secretary",
+    notes: "Execution of irrevocable public utility easements for solar pump stations on community commons land.",
+  },
+  {
+    id: "VOL-004",
+    volunteerName: "Prof. Anita Roy (Ph.D.)",
+    volunteerRef: "EDU-UGC-19940",
+    category: "Teaching",
+    skillTitle: "WASH Community Hygiene, Water ATM Operation & Testing Kit Workshops",
+    hours: 32,
+    sessions: 6,
+    status: "COMPLETED",
+    hourlyRateEstimate: 3000,
+    estimatedValue: 96000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-23",
+    verificationHash: "0x5566778899001122334455667788990011223344556677889900112233445566",
+    verifiedBy: "Zilla Parishad Education Coordinator",
+    notes: "Trained 45 village women self-help group leaders on daily chemical reagent testing and RFID ATM maintenance.",
+  },
+  {
+    id: "VOL-005",
+    volunteerName: "Er. Vikram Shinde (B.E., Solar)",
+    volunteerRef: "SOLAR-MAHA-0091",
+    category: "Engineering",
+    skillTitle: "Solar Submersible Inverter Telemetry Calibration & PV Field Hookup",
+    hours: 16,
+    sessions: 2,
+    status: "PLANNED",
+    hourlyRateEstimate: 5000,
+    estimatedValue: 80000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-28",
+    verificationHash: "0x99aabbccddeeff00112233445566778899aabbccddeeff001122334455667788",
+    verifiedBy: "Scheduled Field Deployment",
+    notes: "Staged integration of remote 4G telemetry sensors on 4x 5HP inverters for automated flow logging.",
+  },
+  {
+    id: "VOL-006",
+    volunteerName: "Dr. Arvind Joshi (MBBS, DPH)",
+    volunteerRef: "MCI-REG-2018-77112",
+    category: "Medical",
+    skillTitle: "Post-Monsoon Waterborne Illness Monitoring & Clean Water Follow-up",
+    hours: 20,
+    sessions: 3,
+    status: "PLANNED",
+    hourlyRateEstimate: 5000,
+    estimatedValue: 100000,
+    estimatedValueCurrency: "INR",
+    purposeId: "water-wardha",
+    purposeName: "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+    date: "2026-10-30",
+    verificationHash: "0x2233445566778899001122334455667788990011223344556677889900112233",
+    verifiedBy: "Scheduled Clinic Roster",
+    notes: "Baseline health survey on gastrointestinal incidence 30 days post-chlorination.",
+  },
+];
+
+export const DEFAULT_VOLUNTEER_IMPACT: VolunteerImpactSummary = {
+  totalHours: 176,
+  completedHours: 140,
+  plannedHours: 36,
+  totalSessions: 29,
+  totalVolunteers: 6,
+  uniqueVolunteers: 6,
+  estimatedEconomicValueInr: 816000,
+  estimatedEconomicValueUsd: 9696.97,
+  estimatedValueInr: 816000,
+  estimatedValueUsd: 9697,
+  hoursByCategory: {
+    Medical: 68,
+    Legal: 24,
+    Teaching: 32,
+    Engineering: 52,
+    Other: 0,
+  },
+  sessionsByCategory: {
+    Medical: 11,
+    Legal: 4,
+    Teaching: 6,
+    Engineering: 8,
+    Other: 0,
+  },
+  byCategory: {
+    Medical: { hours: 68, sessions: 11, estimatedValueInr: 340000, estimatedValueUsd: 4040 },
+    Engineering: { hours: 52, sessions: 8, estimatedValueInr: 260000, estimatedValueUsd: 3090 },
+    Teaching: { hours: 32, sessions: 6, estimatedValueInr: 96000, estimatedValueUsd: 1141 },
+    Legal: { hours: 24, sessions: 4, estimatedValueInr: 120000, estimatedValueUsd: 1426 },
+    Other: { hours: 0, sessions: 0, estimatedValueInr: 0, estimatedValueUsd: 0 },
+  },
+  auditRule: "Anti-Inflation Guarantee: Pro-bono voluntary services are verified and tracked strictly by professional hours; estimated economic values are never inflated into cash or escrow totals.",
 };
 
 const STORAGE_KEY = "bhol_ledger_state_v4";
@@ -357,6 +578,88 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     seedData.escrowState.status === "FROZEN" ? 32 : 98
   );
   const [statementFreshness, setStatementFreshness] = useState<BankStatementFreshness>(DEFAULT_STATEMENT_FRESHNESS);
+  const [volunteerServices, setVolunteerServices] = useState<VolunteerServiceRecord[]>(DEFAULT_VOLUNTEER_SERVICES);
+  const [volunteerImpact, setVolunteerImpact] = useState<VolunteerImpactSummary>(DEFAULT_VOLUNTEER_IMPACT);
+
+  // Recompute volunteer impact whenever volunteer services change
+  useEffect(() => {
+    const totalHours = volunteerServices.reduce((sum, v) => sum + v.hours, 0);
+    const completedHours = volunteerServices.filter((v) => v.status === "COMPLETED").reduce((sum, v) => sum + v.hours, 0);
+    const plannedHours = volunteerServices.filter((v) => v.status === "PLANNED").reduce((sum, v) => sum + v.hours, 0);
+    const totalSessions = volunteerServices.reduce((sum, v) => sum + v.sessions, 0);
+    const totalVolunteers = new Set(volunteerServices.map((v) => v.volunteerName)).size;
+    const valInr = volunteerServices.reduce((sum, v) => sum + v.estimatedValue, 0);
+    const valUsd = Number((valInr / 84.15).toFixed(2));
+
+    const hoursByCategory: Record<VolunteerCategory, number> = {
+      Medical: 0,
+      Legal: 0,
+      Teaching: 0,
+      Engineering: 0,
+      Other: 0,
+    };
+    const sessionsByCategory: Record<VolunteerCategory, number> = {
+      Medical: 0,
+      Legal: 0,
+      Teaching: 0,
+      Engineering: 0,
+      Other: 0,
+    };
+
+    volunteerServices.forEach((v) => {
+      const cat: VolunteerCategory = v.category in hoursByCategory ? v.category : "Other";
+      hoursByCategory[cat] = (hoursByCategory[cat] || 0) + v.hours;
+      sessionsByCategory[cat] = (sessionsByCategory[cat] || 0) + v.sessions;
+    });
+
+    setVolunteerImpact({
+      totalHours,
+      completedHours,
+      plannedHours,
+      totalSessions,
+      totalVolunteers,
+      uniqueVolunteers: totalVolunteers,
+      estimatedEconomicValueInr: valInr,
+      estimatedEconomicValueUsd: valUsd,
+      estimatedValueInr: valInr,
+      estimatedValueUsd: Math.round(valUsd),
+      hoursByCategory,
+      sessionsByCategory,
+      byCategory: {
+        Medical: {
+          hours: hoursByCategory.Medical || 0,
+          sessions: sessionsByCategory.Medical || 0,
+          estimatedValueInr: (hoursByCategory.Medical || 0) * 5000,
+          estimatedValueUsd: Math.round(((hoursByCategory.Medical || 0) * 5000) / 84.15),
+        },
+        Engineering: {
+          hours: hoursByCategory.Engineering || 0,
+          sessions: sessionsByCategory.Engineering || 0,
+          estimatedValueInr: (hoursByCategory.Engineering || 0) * 5000,
+          estimatedValueUsd: Math.round(((hoursByCategory.Engineering || 0) * 5000) / 84.15),
+        },
+        Teaching: {
+          hours: hoursByCategory.Teaching || 0,
+          sessions: sessionsByCategory.Teaching || 0,
+          estimatedValueInr: (hoursByCategory.Teaching || 0) * 3000,
+          estimatedValueUsd: Math.round(((hoursByCategory.Teaching || 0) * 3000) / 84.15),
+        },
+        Legal: {
+          hours: hoursByCategory.Legal || 0,
+          sessions: sessionsByCategory.Legal || 0,
+          estimatedValueInr: (hoursByCategory.Legal || 0) * 5000,
+          estimatedValueUsd: Math.round(((hoursByCategory.Legal || 0) * 5000) / 84.15),
+        },
+        Other: {
+          hours: hoursByCategory.Other || 0,
+          sessions: sessionsByCategory.Other || 0,
+          estimatedValueInr: (hoursByCategory.Other || 0) * 2500,
+          estimatedValueUsd: Math.round(((hoursByCategory.Other || 0) * 2500) / 84.15),
+        },
+      },
+      auditRule: "Anti-Inflation Guarantee: Pro-bono voluntary services are verified and tracked strictly by professional hours; estimated economic values are never inflated into cash or escrow totals.",
+    });
+  }, [volunteerServices]);
 
   const refreshStatement = useCallback(async (daysAgo: number = 0, reportingPeriod?: string) => {
     try {
@@ -389,6 +692,89 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
       stalenessLevel,
       warningBadge: isOverdue ? `⚠️ Statement Overdue: ${daysAgo} days since last upload` : `✓ Statement Current: ${daysAgo}d ago`,
     });
+  }, []);
+
+  const logVolunteerService = useCallback(async (record: {
+    volunteerName: string;
+    category: VolunteerCategory;
+    skillTitle: string;
+    hours: number;
+    sessions?: number;
+    status?: VolunteerServiceStatus;
+    volunteerRef?: string;
+    hourlyRateEstimate?: number;
+    estimatedValue?: number;
+    purposeId?: string;
+    notes?: string;
+  }): Promise<VolunteerServiceRecord> => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/donate/log-volunteer-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(record),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.record) {
+          setVolunteerServices((prev) => [data.record, ...prev]);
+          if (data.summary) {
+            setVolunteerImpact(data.summary);
+          }
+          return data.record;
+        }
+      }
+    } catch {
+      // Local fallback
+    }
+
+    const volId = `VOL-${Date.now().toString().slice(-3)}`;
+    const randomHex = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    const hourlyRate = record.hourlyRateEstimate || (record.category === "Teaching" ? 3000 : 5000);
+    const estVal = record.estimatedValue || (record.hours * hourlyRate);
+
+    const newRec: VolunteerServiceRecord = {
+      id: volId,
+      volunteerName: record.volunteerName,
+      volunteerRef: record.volunteerRef || `REG-${Math.floor(10000 + Math.random() * 90000)}`,
+      category: record.category,
+      skillTitle: record.skillTitle,
+      hours: record.hours,
+      sessions: record.sessions || 1,
+      status: record.status || "COMPLETED",
+      hourlyRateEstimate: hourlyRate,
+      estimatedValue: estVal,
+      estimatedValueCurrency: "INR",
+      purposeId: record.purposeId || "water-wardha",
+      purposeName: seedData.campaign.name,
+      date: new Date().toISOString().slice(0, 10),
+      verificationHash: `0x${randomHex}`,
+      verifiedBy: "Panchayat Secretary & Project Coordinator",
+      notes: record.notes,
+    };
+
+    setVolunteerServices((prev) => [newRec, ...prev]);
+    return newRec;
+  }, []);
+
+  // Fetch initial volunteer services from backend if online
+  useEffect(() => {
+    async function fetchVolunteers() {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/donate/volunteer-services");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.records && data.records.length > 0) {
+            setVolunteerServices(data.records);
+          }
+          if (data.summary) {
+            setVolunteerImpact(data.summary);
+          }
+        }
+      } catch {
+        // use default state
+      }
+    }
+    fetchVolunteers();
   }, []);
 
   const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
@@ -474,13 +860,13 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
       donorIdentifier?: string;
       donorName?: string;
       amount: number;
-      rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS";
+      rail: "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS" | "VOLUNTEER_SERVICE";
       token: string;
       purposeName?: string;
       utrNumber?: string | null;
       donorEmail?: string;
       donorTaxId?: string;
-      contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+      contributionType?: "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER";
       itemName?: string;
       quantity?: number;
       unit?: string;
@@ -492,18 +878,58 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         damaged: number;
         remaining: number;
       };
+      volunteerCategory?: VolunteerCategory;
+      volunteerName?: string;
+      volunteerRef?: string;
+      skillTitle?: string;
+      hours?: number;
+      sessions?: number;
+      volunteerStatus?: VolunteerServiceStatus;
     }): LedgerTransaction => {
       const ethRate = seedData.financials.exchangeRates.ethUsd; // $3,200
       const inrRate = seedData.financials.exchangeRates.usdInr; // ₹84.15
 
-      const isNonCash = params.contributionType && ["GOODS", "FOOD", "MEDICAL", "OTHER"].includes(params.contributionType);
+      const isVolunteer = params.contributionType === "VOLUNTEER_SERVICE";
+      const isNonCash = (!isVolunteer) && params.contributionType && ["GOODS", "FOOD", "MEDICAL", "OTHER"].includes(params.contributionType);
 
       let amountEth = 0;
       let amountUsd = 0;
       let amountInr = 0;
       let displayAmount = "";
 
-      if (isNonCash) {
+      if (isVolunteer) {
+        // ZERO CASH INFLATION: Pro-bono hours do not add to liquid cash escrow
+        amountEth = 0;
+        amountUsd = 0;
+        amountInr = 0;
+        const vHours = params.hours || params.amount || 8;
+        const vCat = params.volunteerCategory || "Engineering";
+        displayAmount = `${vHours} hrs (${vCat})`;
+
+        const hourlyRate = (vCat === "Teaching" ? 3000 : 5000);
+        const estValInr = params.estimatedValue || (vHours * hourlyRate);
+
+        const newVolRecord: VolunteerServiceRecord = {
+          id: `VOL-${Date.now().toString().slice(-3)}`,
+          volunteerName: params.volunteerName || params.donorName || "Er. Specialized Consultant",
+          volunteerRef: params.volunteerRef || `REG-${Math.floor(10000 + Math.random() * 90000)}`,
+          category: vCat,
+          skillTitle: params.skillTitle || params.itemName || `${vCat} Pro-Bono Services`,
+          hours: vHours,
+          sessions: params.sessions || 1,
+          status: params.volunteerStatus || "COMPLETED",
+          hourlyRateEstimate: hourlyRate,
+          estimatedValue: estValInr,
+          estimatedValueCurrency: "INR",
+          purposeId: "water-wardha",
+          purposeName: params.purposeName || seedData.campaign.name,
+          date: new Date().toISOString().slice(0, 10),
+          verificationHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`,
+          verifiedBy: "Panchayat Secretary & Project Coordinator",
+          notes: `Voluntary pro-bono contribution of ${vHours} hrs in ${vCat}.`,
+        };
+        setVolunteerServices((prev) => [newVolRecord, ...prev]);
+      } else if (isNonCash) {
         const qty = params.quantity || params.amount || 1;
         const unitLabel = params.unit || "units";
         displayAmount = `${qty} ${unitLabel}`;
@@ -560,11 +986,11 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         amountEth: Number(amountEth.toFixed(4)),
         amountUsd: Number(amountUsd.toFixed(2)),
         amountInr: Number(amountInr.toFixed(2)),
-        rail: isNonCash ? "IN_KIND_LOGISTICS" : params.rail,
-        token: isNonCash ? (params.unit || "ITEM").toUpperCase() : params.token,
+        rail: isVolunteer ? "VOLUNTEER_SERVICE" : (isNonCash ? "IN_KIND_LOGISTICS" : params.rail),
+        token: isVolunteer ? "HOURS" : (isNonCash ? (params.unit || "ITEM").toUpperCase() : params.token),
         purpose: params.purposeName || seedData.campaign.name,
         txHash: newTxHash,
-        status: isNonCash ? "RECEIVED_IN_WAREHOUSE" : "LOCKED_IN_ESCROW",
+        status: isVolunteer ? "LOGGED_IN_REGISTRY" : (isNonCash ? "RECEIVED_IN_WAREHOUSE" : "LOCKED_IN_ESCROW"),
         timestamp: "Just now (Synced)",
         block: 20491892 + Math.floor(Math.random() * 5),
         utrNumber: params.utrNumber || null,
@@ -572,16 +998,22 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         taxReceiptId: `80G-2026-${Math.floor(100000 + Math.random() * 900000)}`,
         contributionType: params.contributionType || "MONEY",
         itemName: params.itemName || null,
-        quantity: params.quantity || (isNonCash ? params.amount : null),
-        unit: params.unit || null,
+        quantity: params.quantity || (isNonCash ? params.amount : (isVolunteer ? (params.hours || params.amount) : null)),
+        unit: isVolunteer ? "hours" : (params.unit || null),
         estimatedValue: params.estimatedValue || (isNonCash ? amountUsd : null),
         inventory: finalInventory,
+        volunteerCategory: params.volunteerCategory || null,
+        volunteerName: params.volunteerName || null,
+        volunteerRef: params.volunteerRef || null,
+        hours: params.hours || null,
+        sessions: params.sessions || null,
+        volunteerStatus: params.volunteerStatus || null,
       };
 
       // State updates:
       // If Cash donation, scale liquid vault and milestone tranches
-      // If Non-Cash in-kind donation, record in live transaction feed and warehouse ledger without diluting liquid cash escrow
-      if (!isNonCash) {
+      // If Non-Cash in-kind donation or Volunteer Service, record in live transaction feed without diluting liquid cash escrow
+      if (!isNonCash && !isVolunteer) {
         const finalEth = Number(amountEth.toFixed(4));
         setTotalDonated(finalEth);
         setVaultBalance(finalEth);
@@ -708,6 +1140,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     setRecentTxs(INITIAL_TRANSACTIONS);
     setTranches(seedData.tranches as TrancheState[]);
     setStatementFreshness(DEFAULT_STATEMENT_FRESHNESS);
+    setVolunteerServices(DEFAULT_VOLUNTEER_SERVICES);
+    setVolunteerImpact(DEFAULT_VOLUNTEER_IMPACT);
 
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -736,6 +1170,9 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     setTrustScore,
     statementFreshness,
     refreshStatement,
+    volunteerServices,
+    volunteerImpact,
+    logVolunteerService,
   };
 
   return (

@@ -14,7 +14,19 @@ class ContributionType(str, Enum):
     GOODS = "GOODS"
     FOOD = "FOOD"
     MEDICAL = "MEDICAL"
+    VOLUNTEER_SERVICE = "VOLUNTEER_SERVICE"
     OTHER = "OTHER"
+
+class VolunteerCategory(str, Enum):
+    MEDICAL = "Medical"
+    LEGAL = "Legal"
+    TEACHING = "Teaching"
+    ENGINEERING = "Engineering"
+    OTHER = "Other"
+
+class VolunteerStatus(str, Enum):
+    PLANNED = "PLANNED"
+    COMPLETED = "COMPLETED"
 
 class InventoryTracking(BaseModel):
     pledged: float = 0
@@ -191,20 +203,196 @@ RECENT_DONATIONS = [
     }
 ]
 
+# ────────────────────────────────────────────────────────────
+# Feature 4: Voluntary Services (Time & Professional Skills)
+# ────────────────────────────────────────────────────────────
+VOLUNTEER_SERVICES: List[Dict[str, Any]] = [
+    {
+        "id": "VOL-001",
+        "volunteerName": "Dr. Sunita Rao (MD)",
+        "volunteerRef": "MCI-REG-2012-44102",
+        "category": "Medical",
+        "skillTitle": "Rural Fluorosis Screening & Pediatric Triage Health Camp",
+        "hours": 48.0,
+        "sessions": 8,
+        "status": "COMPLETED",
+        "hourlyRateEstimate": 5000.0,
+        "estimatedValue": 240000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-18",
+        "verificationHash": "0x4a18b7c29e0134df8921a4bc567890ef1234567890abcdef1234567890abcdef",
+        "verifiedBy": "District Medical Officer & NGO Field Director",
+        "notes": "Diagnostic screening of 312 children across 4 hamlets for early skeletal and dental fluorosis."
+    },
+    {
+        "id": "VOL-002",
+        "volunteerName": "Er. Pradeep Patil (M.Tech, Civil)",
+        "volunteerRef": "IEI-ENG-99881",
+        "category": "Engineering",
+        "skillTitle": "Hydrogeological Aquifer Mapping & Borewell Casing Structural Integrity",
+        "hours": 36.0,
+        "sessions": 6,
+        "status": "COMPLETED",
+        "hourlyRateEstimate": 5000.0,
+        "estimatedValue": 180000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-21",
+        "verificationHash": "0x7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234",
+        "verifiedBy": "Chief Structural Consultant, Vidarbha Geoconsult",
+        "notes": "Resistivity soundings and acoustic telemetry check on 3 deep borewells prior to pump lowering."
+    },
+    {
+        "id": "VOL-003",
+        "volunteerName": "Adv. Rajesh Deshmukh",
+        "volunteerRef": "BAR-MAH-2009-8812",
+        "category": "Legal",
+        "skillTitle": "Grampanchayat Water Rights Easement & Statutory FCRA Advisory",
+        "hours": 24.0,
+        "sessions": 4,
+        "status": "COMPLETED",
+        "hourlyRateEstimate": 5000.0,
+        "estimatedValue": 120000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-22",
+        "verificationHash": "0x11223344556677889900aabbccddeeff0011223344556677889900aabbccddee",
+        "verifiedBy": "Legal Compliance Watchtower & Panchayat Secretary",
+        "notes": "Execution of irrevocable public utility easements for solar pump stations on community commons land."
+    },
+    {
+        "id": "VOL-004",
+        "volunteerName": "Prof. Anita Roy (Ph.D.)",
+        "volunteerRef": "EDU-UGC-19940",
+        "category": "Teaching",
+        "skillTitle": "WASH Community Hygiene, Water ATM Operation & Testing Kit Workshops",
+        "hours": 32.0,
+        "sessions": 6,
+        "status": "COMPLETED",
+        "hourlyRateEstimate": 3000.0,
+        "estimatedValue": 96000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-23",
+        "verificationHash": "0x5566778899001122334455667788990011223344556677889900112233445566",
+        "verifiedBy": "Zilla Parishad Education Coordinator",
+        "notes": "Trained 45 village women self-help group leaders on daily chemical reagent testing and RFID ATM maintenance."
+    },
+    {
+        "id": "VOL-005",
+        "volunteerName": "Er. Vikram Shinde (B.E., Solar)",
+        "volunteerRef": "SOLAR-MAHA-0091",
+        "category": "Engineering",
+        "skillTitle": "Solar Submersible Inverter Telemetry Calibration & PV Field Hookup",
+        "hours": 16.0,
+        "sessions": 2,
+        "status": "PLANNED",
+        "hourlyRateEstimate": 5000.0,
+        "estimatedValue": 80000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-28",
+        "verificationHash": "0x99aabbccddeeff00112233445566778899aabbccddeeff001122334455667788",
+        "verifiedBy": "Scheduled Field Deployment",
+        "notes": "Staged integration of remote 4G telemetry sensors on 4x 5HP inverters for automated flow logging."
+    },
+    {
+        "id": "VOL-006",
+        "volunteerName": "Dr. Arvind Joshi (MBBS, DPH)",
+        "volunteerRef": "MCI-REG-2018-77112",
+        "category": "Medical",
+        "skillTitle": "Post-Monsoon Waterborne Illness Monitoring & Clean Water Follow-up",
+        "hours": 20.0,
+        "sessions": 3,
+        "status": "PLANNED",
+        "hourlyRateEstimate": 5000.0,
+        "estimatedValue": 100000.0,
+        "estimatedValueCurrency": "INR",
+        "purposeId": "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": "2026-10-30",
+        "verificationHash": "0x2233445566778899001122334455667788990011223344556677889900112233",
+        "verifiedBy": "Scheduled Clinic Roster",
+        "notes": "Baseline health survey on gastrointestinal incidence 30 days post-chlorination."
+    }
+]
+
+def calculate_volunteer_impact() -> Dict[str, Any]:
+    total_hours = sum(v["hours"] for v in VOLUNTEER_SERVICES)
+    completed_hours = sum(v["hours"] for v in VOLUNTEER_SERVICES if v["status"] == "COMPLETED")
+    planned_hours = sum(v["hours"] for v in VOLUNTEER_SERVICES if v["status"] == "PLANNED")
+    total_sessions = sum(v["sessions"] for v in VOLUNTEER_SERVICES)
+    unique_vols = len(set(v["volunteerName"] for v in VOLUNTEER_SERVICES))
+    
+    val_inr = sum(v["estimatedValue"] for v in VOLUNTEER_SERVICES)
+    val_usd = round(val_inr / 84.15, 2)
+
+    cat_hours = {"Medical": 0.0, "Legal": 0.0, "Teaching": 0.0, "Engineering": 0.0, "Other": 0.0}
+    cat_sessions = {"Medical": 0, "Legal": 0, "Teaching": 0, "Engineering": 0, "Other": 0}
+
+    for v in VOLUNTEER_SERVICES:
+        cat = v.get("category", "Other")
+        if cat in cat_hours:
+            cat_hours[cat] += v["hours"]
+            cat_sessions[cat] += v.get("sessions", 1)
+        else:
+            cat_hours["Other"] += v["hours"]
+            cat_sessions["Other"] += v.get("sessions", 1)
+
+    return {
+        "totalHours": total_hours,
+        "completedHours": completed_hours,
+        "plannedHours": planned_hours,
+        "totalSessions": total_sessions,
+        "totalVolunteers": unique_vols,
+        "estimatedEconomicValueInr": val_inr,
+        "estimatedEconomicValueUsd": val_usd,
+        "hoursByCategory": cat_hours,
+        "sessionsByCategory": cat_sessions,
+        "auditRule": "Anti-Inflation Guarantee: Pro-bono voluntary services are verified and tracked strictly by professional hours; estimated economic values are never inflated into cash or escrow totals."
+    }
+
 class DepositRequest(BaseModel):
-    rail: str  # "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS"
-    token: str # "ETH" | "USDC" | "INR" | "ITEM"
+    rail: str  # "CRYPTO" | "UPI" | "IN_KIND_LOGISTICS" | "VOLUNTEER_SERVICE"
+    token: str # "ETH" | "USDC" | "INR" | "ITEM" | "HOURS"
     amount: float
     purposeId: str
     donorIdentifier: Optional[str] = "0x71C9414B8B67B543D75e3Ea2E59E50Eb147Eb901"
     utrNumber: Optional[str] = None
     # Feature 1: Non-Cash In-Kind Donation & Inventory Tracking Fields
-    contributionType: Optional[str] = "MONEY" # "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER"
+    contributionType: Optional[str] = "MONEY" # "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER"
     itemName: Optional[str] = None
     quantity: Optional[float] = None
     unit: Optional[str] = None
     estimatedValue: Optional[float] = None
     inventory: Optional[dict] = None # {"pledged": X, "received": Y, "distributed": Z, "damaged": W, "remaining": R}
+    # Feature 4: Voluntary Services Fields
+    volunteerCategory: Optional[str] = None # "Medical" | "Legal" | "Teaching" | "Engineering" | "Other"
+    volunteerName: Optional[str] = None
+    volunteerRef: Optional[str] = None
+    skillTitle: Optional[str] = None
+    hours: Optional[float] = None
+    sessions: Optional[int] = None
+    volunteerStatus: Optional[str] = "COMPLETED" # "PLANNED" | "COMPLETED"
+
+class LogVolunteerRequest(BaseModel):
+    volunteerName: str
+    category: str = "Engineering" # "Medical" | "Legal" | "Teaching" | "Engineering" | "Other"
+    skillTitle: str
+    hours: float
+    sessions: int = 1
+    status: str = "COMPLETED" # "PLANNED" | "COMPLETED"
+    volunteerRef: Optional[str] = None
+    hourlyRateEstimate: Optional[float] = 5000.0
+    estimatedValue: Optional[float] = None
+    purposeId: Optional[str] = "water-wardha"
+    notes: Optional[str] = None
 
 @router.get("/options")
 def get_donate_options():
@@ -218,6 +406,7 @@ def get_donate_options():
         },
         "supportedPurposes": SUPPORTED_PURPOSES,
         "recentDonations": RECENT_DONATIONS,
+        "volunteerImpact": calculate_volunteer_impact(),
         "escrowContract": "0x3Af19B02cD319985E1e012399F319114d5e56E1",
         "network": "Ethereum Sepolia / Polygon L2",
         "merchantVpa": "cascade.escrow@icici"
@@ -230,10 +419,55 @@ def simulate_deposit(req: DepositRequest):
     # Calculate amounts & check contribution type
     eth_usd = 3200.00
     usd_inr = 84.15
-    is_non_cash = req.contributionType and req.contributionType.upper() in ["GOODS", "FOOD", "MEDICAL", "OTHER"]
-    contrib_type = req.contributionType.upper() if is_non_cash else "MONEY"
+    is_volunteer = bool(req.contributionType and req.contributionType.upper() == "VOLUNTEER_SERVICE")
+    is_non_cash = bool((not is_volunteer) and req.contributionType and req.contributionType.upper() in ["GOODS", "FOOD", "MEDICAL", "OTHER"])
+    
+    if is_volunteer:
+        contrib_type = "VOLUNTEER_SERVICE"
+        v_hours = float(req.hours or req.amount or 8.0)
+        v_sessions = int(req.sessions or 1)
+        v_category = req.volunteerCategory or "Engineering"
+        v_name = req.volunteerName or (req.donorIdentifier if not req.donorIdentifier.startswith("0x") else "Er. Specialized Consultant")
+        v_skill = req.skillTitle or req.itemName or f"{v_category} Professional Services"
+        v_status = req.volunteerStatus or "COMPLETED"
+        hourly_rate = 5000.0 if v_category in ["Medical", "Engineering", "Legal"] else 3000.0
+        est_val_inr = float(req.estimatedValue or (v_hours * hourly_rate))
+        est_val_usd = round(est_val_inr / usd_inr, 2)
 
-    if is_non_cash:
+        # CRITICAL RULE: Never inflate voluntary service value into liquid cash escrow totals
+        amount_eth = 0.0
+        amount_usd = 0.0
+        amount_inr = 0.0
+        display_amount = f"{int(v_hours) if v_hours.is_integer() else v_hours} hrs ({v_category})"
+        item_label = v_skill
+        inv_data = None
+
+        # Add to voluntary services registry
+        vol_id = f"VOL-{len(VOLUNTEER_SERVICES) + 1:03d}"
+        vol_hash = "0x" + hashlib.sha256(f"{vol_id}:{v_name}:{v_category}:{v_hours}:{time.time()}".encode("utf-8")).hexdigest()
+        new_vol_entry = {
+            "id": vol_id,
+            "volunteerName": v_name,
+            "volunteerRef": req.volunteerRef or f"REG-{random.randint(10000, 99999)}",
+            "category": v_category,
+            "skillTitle": v_skill,
+            "hours": v_hours,
+            "sessions": v_sessions,
+            "status": v_status,
+            "hourlyRateEstimate": hourly_rate,
+            "estimatedValue": est_val_inr,
+            "estimatedValueCurrency": "INR",
+            "purposeId": purpose["id"],
+            "purposeName": purpose["name"],
+            "date": time.strftime("%Y-%m-%d", time.gmtime()),
+            "verificationHash": vol_hash,
+            "verifiedBy": "Panchayat Secretary & Project Coordinator",
+            "notes": f"Voluntary pro-bono contribution of {v_hours} hrs in {v_category}."
+        }
+        VOLUNTEER_SERVICES.insert(0, new_vol_entry)
+
+    elif is_non_cash:
+        contrib_type = req.contributionType.upper()
         pledged_qty = float(req.quantity or req.amount or 1.0)
         received_qty = float(req.inventory.get("received", pledged_qty)) if req.inventory else pledged_qty
         distributed_qty = float(req.inventory.get("distributed", 0.0)) if req.inventory else 0.0
@@ -255,6 +489,7 @@ def simulate_deposit(req: DepositRequest):
         display_amount = f"{int(pledged_qty) if pledged_qty.is_integer() else pledged_qty} {req.unit or 'units'}"
         item_label = req.itemName or "In-Kind Relief Supplies"
     else:
+        contrib_type = "MONEY"
         inv_data = None
         item_label = None
         if req.rail == "CRYPTO":
@@ -282,9 +517,12 @@ def simulate_deposit(req: DepositRequest):
     block_num = 20491880 + random.randint(1, 50)
     utr_code = req.utrNumber or (f"UTR-2026-{random.randint(100000, 999999)}" if req.rail == "UPI" else None)
     
-    # Non-cash item commitment hash
+    # Non-cash or volunteer item commitment hash
     item_manifest_hash = None
-    if is_non_cash:
+    if is_volunteer:
+        manifest_raw = f"VOLUNTEER:{v_name}:{v_category}:{v_hours}hrs:{est_val_inr}INR"
+        item_manifest_hash = "0x" + hashlib.sha256(manifest_raw.encode("utf-8")).hexdigest()
+    elif is_non_cash:
         manifest_raw = f"{contrib_type}:{item_label}:{inv_data['pledged']}:{req.unit}:{amount_usd}"
         item_manifest_hash = "0x" + hashlib.sha256(manifest_raw.encode("utf-8")).hexdigest()
 
@@ -296,21 +534,22 @@ def simulate_deposit(req: DepositRequest):
         "txHash": tx_hash,
         "blockNumber": block_num,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-        "rail": "IN_KIND_LOGISTICS" if is_non_cash else req.rail,
-        "token": (req.unit or "ITEM").upper() if is_non_cash else req.token,
+        "rail": "VOLUNTEER_SERVICE" if is_volunteer else ("IN_KIND_LOGISTICS" if is_non_cash else req.rail),
+        "token": "HOURS" if is_volunteer else ((req.unit or "ITEM").upper() if is_non_cash else req.token),
         "contributionType": contrib_type,
+        "isVolunteerService": is_volunteer,
         "isNonCash": is_non_cash,
         "itemName": item_label,
-        "quantity": inv_data["pledged"] if is_non_cash else req.amount,
-        "unit": req.unit or "units",
-        "estimatedValueUsd": round(amount_usd, 2) if is_non_cash else None,
-        "estimatedValueInr": round(amount_inr, 2) if is_non_cash else None,
+        "quantity": v_hours if is_volunteer else (inv_data["pledged"] if is_non_cash else req.amount),
+        "unit": "hours" if is_volunteer else (req.unit or "units"),
+        "estimatedValueUsd": est_val_usd if is_volunteer else (round(amount_usd, 2) if is_non_cash else None),
+        "estimatedValueInr": est_val_inr if is_volunteer else (round(amount_inr, 2) if is_non_cash else None),
         "inventory": inv_data,
         "itemManifestCommitment": item_manifest_hash,
-        "amountDeposited": req.amount,
-        "equivalentEth": round(amount_eth, 4),
-        "equivalentUsd": round(amount_usd, 2),
-        "equivalentInr": round(amount_inr, 2),
+        "amountDeposited": 0.0 if is_volunteer else req.amount,
+        "equivalentEth": 0.0 if is_volunteer else round(amount_eth, 4),
+        "equivalentUsd": 0.0 if is_volunteer else round(amount_usd, 2),
+        "equivalentInr": 0.0 if is_volunteer else round(amount_inr, 2),
         "donor": req.donorIdentifier,
         "utrNumber": utr_code,
         "purposeBound": {
@@ -319,15 +558,16 @@ def simulate_deposit(req: DepositRequest):
             "category": purpose["category"],
             "keccak256Commitment": earmark_hash,
             "rule": (
-                "Verified physical delivery & warehouse custody tracking. In-kind goods are strictly segregated "
-                "from cash escrow pools and tracked via itemized inventory manifests."
+                "Anti-Inflation Guarantee: Voluntary professional service hours are tracked directly on the project impact ledger. Estimated economic value is never inflated into cash or escrow totals."
+                if is_volunteer else
+                ("Verified physical delivery & warehouse custody tracking. In-kind goods are strictly segregated from cash escrow pools and tracked via itemized inventory manifests."
                 if is_non_cash else
-                "100% of these funds are locked in PurposeBoundEscrow.sol. They can ONLY be released if verified receipts match this category & pass pixel ELA tamper audits."
+                "100% of these funds are locked in PurposeBoundEscrow.sol. They can ONLY be released if verified receipts match this category & pass pixel ELA tamper audits.")
             )
         },
         "smartContract": {
             "address": "0x3Af19B02cD319985E1e012399F319114d5e56E1",
-            "state": "RECEIVED_IN_WAREHOUSE" if is_non_cash else "ACTIVE_LOCKED",
+            "state": "LOGGED_IN_REGISTRY" if is_volunteer else ("RECEIVED_IN_WAREHOUSE" if is_non_cash else "ACTIVE_LOCKED"),
             "autonomousProtection": "Enabled (Semantic Nullifier + pHash duplicate check)"
         }
     }
@@ -338,28 +578,84 @@ def simulate_deposit(req: DepositRequest):
         "donor": (req.donorIdentifier[:6] + "..." + req.donorIdentifier[-4:]) if req.donorIdentifier.startswith("0x") else req.donorIdentifier,
         "donorFull": req.donorIdentifier,
         "amount": display_amount,
-        "amountUsd": f"${amount_usd:,.2f}",
-        "amountInr": f"₹{amount_inr:,.0f}",
-        "rail": "IN_KIND_LOGISTICS" if is_non_cash else req.rail,
-        "token": (req.unit or "ITEM").upper() if is_non_cash else req.token,
+        "amountUsd": f"${est_val_usd:,.2f}" if is_volunteer else f"${amount_usd:,.2f}",
+        "amountInr": f"₹{est_val_inr:,.0f}" if is_volunteer else f"₹{amount_inr:,.0f}",
+        "rail": "VOLUNTEER_SERVICE" if is_volunteer else ("IN_KIND_LOGISTICS" if is_non_cash else req.rail),
+        "token": "HOURS" if is_volunteer else ((req.unit or "ITEM").upper() if is_non_cash else req.token),
         "contributionType": contrib_type,
         "itemName": item_label,
-        "quantity": inv_data["pledged"] if is_non_cash else None,
-        "unit": req.unit if is_non_cash else None,
-        "estimatedValue": amount_usd if is_non_cash else None,
+        "quantity": v_hours if is_volunteer else (inv_data["pledged"] if is_non_cash else None),
+        "unit": "hours" if is_volunteer else (req.unit if is_non_cash else None),
+        "estimatedValue": est_val_usd if is_volunteer else (amount_usd if is_non_cash else None),
         "inventory": inv_data,
+        "volunteerCategory": v_category if is_volunteer else None,
+        "volunteerName": v_name if is_volunteer else None,
+        "hours": v_hours if is_volunteer else None,
+        "sessions": v_sessions if is_volunteer else None,
+        "volunteerStatus": v_status if is_volunteer else None,
         "purpose": purpose["name"],
         "utrNumber": utr_code,
         "txHash": tx_hash,
-        "status": "RECEIVED_IN_WAREHOUSE" if is_non_cash else "LOCKED_IN_ESCROW",
+        "status": "LOGGED_IN_REGISTRY" if is_volunteer else ("RECEIVED_IN_WAREHOUSE" if is_non_cash else "LOCKED_IN_ESCROW"),
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "block": block_num
     }
     RECENT_DONATIONS.insert(0, recent_entry)
-    if len(RECENT_DONATIONS) > 15:
+    if len(RECENT_DONATIONS) > 20:
         RECENT_DONATIONS.pop()
         
     return receipt
+
+@router.get("/volunteer-services")
+def get_volunteer_services():
+    """
+    Returns voluntary professional services records and aggregate impact summary.
+    Estimated monetary value is provided for impact evaluation but strictly segregated from cash totals.
+    """
+    return {
+        "status": "SUCCESS",
+        "summary": calculate_volunteer_impact(),
+        "records": VOLUNTEER_SERVICES
+    }
+
+@router.post("/log-volunteer-service")
+def log_volunteer_service(req: LogVolunteerRequest):
+    """
+    Directly logs a professional volunteer service contribution to the project.
+    """
+    usd_inr = 84.15
+    hourly_rate = req.hourlyRateEstimate or 5000.0
+    est_val_inr = float(req.estimatedValue or (req.hours * hourly_rate))
+    
+    vol_id = f"VOL-{len(VOLUNTEER_SERVICES) + 1:03d}"
+    vol_hash = "0x" + hashlib.sha256(f"{vol_id}:{req.volunteerName}:{req.category}:{req.hours}:{time.time()}".encode("utf-8")).hexdigest()
+    
+    new_record = {
+        "id": vol_id,
+        "volunteerName": req.volunteerName,
+        "volunteerRef": req.volunteerRef or f"REG-{random.randint(10000, 99999)}",
+        "category": req.category,
+        "skillTitle": req.skillTitle,
+        "hours": float(req.hours),
+        "sessions": int(req.sessions),
+        "status": req.status,
+        "hourlyRateEstimate": hourly_rate,
+        "estimatedValue": est_val_inr,
+        "estimatedValueCurrency": "INR",
+        "purposeId": req.purposeId or "water-wardha",
+        "purposeName": "Rural Water Infrastructure Fund (Maharashtra Cluster)",
+        "date": time.strftime("%Y-%m-%d", time.gmtime()),
+        "verificationHash": vol_hash,
+        "verifiedBy": "Panchayat Secretary & Project Coordinator",
+        "notes": req.notes or f"Voluntary pro-bono contribution of {req.hours} hrs in {req.category}."
+    }
+    VOLUNTEER_SERVICES.insert(0, new_record)
+    
+    return {
+        "status": "SUCCESS",
+        "record": new_record,
+        "summary": calculate_volunteer_impact()
+    }
 
 @router.get("/inventory-overview")
 def get_inventory_overview():

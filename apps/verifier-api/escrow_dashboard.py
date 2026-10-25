@@ -252,12 +252,15 @@ ACTIVITY_FEED = [
 # ────────────────────────────────────────────────────────────
 @router.get("/state")
 def get_dashboard_state():
+    from donate_engine import calculate_volunteer_impact, VOLUNTEER_SERVICES
     next_tranche = next((t for t in TRANCHES if t["status"] != "RELEASED"), None)
     return {
         "campaign": CAMPAIGN_STATE,
         "tranches": TRANCHES,
         "activityFeed": ACTIVITY_FEED,
         "statementFreshness": calculate_statement_freshness(),
+        "volunteerImpact": calculate_volunteer_impact(),
+        "volunteerServices": VOLUNTEER_SERVICES,
         "summary": {
             "lockedBalanceEth": CAMPAIGN_STATE["totalDepositedEth"] - CAMPAIGN_STATE["totalReleasedEth"],
             "releasedBalanceEth": CAMPAIGN_STATE["totalReleasedEth"],
@@ -267,6 +270,15 @@ def get_dashboard_state():
             "nextTrancheAmountEth": next_tranche["amountEth"] if next_tranche else 0.0,
             "contractAddress": CAMPAIGN_STATE["contractAddress"]
         }
+    }
+
+@router.get("/volunteer-impact")
+def get_volunteer_impact():
+    from donate_engine import calculate_volunteer_impact, VOLUNTEER_SERVICES
+    return {
+        "status": "SUCCESS",
+        "summary": calculate_volunteer_impact(),
+        "services": VOLUNTEER_SERVICES
     }
 
 @router.post("/lock-donation")

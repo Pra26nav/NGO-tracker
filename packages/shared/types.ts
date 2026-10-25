@@ -380,7 +380,7 @@ export interface AdversarialSimulationReport {
 /* ────────────────────────────────────────────────────────────
    Feature 1: Non-Cash Donations & Real-Time Inventory Tracking
 ──────────────────────────────────────────────────────────── */
-export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "OTHER";
+export type ContributionType = "MONEY" | "GOODS" | "FOOD" | "MEDICAL" | "VOLUNTEER_SERVICE" | "OTHER";
 
 export interface InventoryTracking {
   pledged: number;
@@ -401,6 +401,45 @@ export interface NonCashDonationDetails {
   condition?: "NEW" | "SEALED_STERILE" | "CERTIFIED_FOOD_GRADE" | "REFURBISHED";
 }
 
+/* ────────────────────────────────────────────────────────────
+   Feature 4: Voluntary Services (Time & Professional Skills)
+──────────────────────────────────────────────────────────── */
+export type VolunteerCategory = "Medical" | "Legal" | "Teaching" | "Engineering" | "Other";
+export type VolunteerServiceStatus = "PLANNED" | "COMPLETED";
+
+export interface VolunteerServiceRecord {
+  id: string;
+  volunteerName: string;
+  volunteerRef?: string;
+  category: VolunteerCategory;
+  skillTitle: string;
+  hours: number;
+  sessions: number;
+  status: VolunteerServiceStatus;
+  estimatedValue: number;
+  estimatedValueCurrency: string;
+  hourlyRateEstimate?: number;
+  purposeId: string;
+  purposeName: string;
+  date: string;
+  verificationHash?: string;
+  verifiedBy?: string;
+  notes?: string;
+}
+
+export interface VolunteerImpactSummary {
+  totalHours: number;
+  completedHours: number;
+  plannedHours: number;
+  totalSessions: number;
+  totalVolunteers: number;
+  estimatedEconomicValueInr: number;
+  estimatedEconomicValueUsd: number;
+  hoursByCategory: Record<VolunteerCategory, number>;
+  sessionsByCategory: Record<VolunteerCategory, number>;
+  auditRule: string;
+}
+
 export interface DonationRecord {
   id: string;
   donor: string;
@@ -408,11 +447,11 @@ export interface DonationRecord {
   amount: string;
   amountUsd?: number | string;
   amountInr?: number | string;
-  rail: "CRYPTO" | "FIAT" | "UPI" | "IN_KIND_LOGISTICS";
+  rail: "CRYPTO" | "FIAT" | "UPI" | "IN_KIND_LOGISTICS" | "VOLUNTEER_SERVICE";
   token?: string;
   purpose: string;
   txHash: string;
-  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE";
+  status: "LOCKED_IN_ESCROW" | "RELEASED" | "FROZEN" | "RECEIVED_IN_WAREHOUSE" | "LOGGED_IN_REGISTRY";
   timestamp: string;
   block?: number;
   utrNumber?: string | null;
@@ -422,6 +461,13 @@ export interface DonationRecord {
   unit?: string | null;
   estimatedValue?: number | null;
   inventory?: InventoryTracking | null;
+  // Feature 4: Volunteer Service fields
+  volunteerCategory?: VolunteerCategory | null;
+  volunteerName?: string | null;
+  volunteerRef?: string | null;
+  hours?: number | null;
+  sessions?: number | null;
+  volunteerStatus?: VolunteerServiceStatus | null;
 }
 
 /* ────────────────────────────────────────────────────────────
