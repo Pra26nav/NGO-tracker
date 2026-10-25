@@ -1,0 +1,7 @@
+{
+  "/donate/page": "app/donate/page.js",
+  "/red-team/page": "app/red-team/page.js",
+  "/pitch/page": "app/pitch/page.js",
+  "/flow-tracer/page": "app/flow-tracer/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}
