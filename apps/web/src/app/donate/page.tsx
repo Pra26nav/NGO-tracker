@@ -456,6 +456,50 @@ export default function DonatePage() {
           </div>
         )}
 
+        {/* ── LIVE FOREX & CRYPTO ORACLE CONVERSION RATES BAR (SYSTEM ORACLE) ── */}
+        <div className="card-brutal bg-white p-3.5 sm:p-4 rounded-xl border-2 border-black flex flex-wrap items-center justify-between gap-3 shadow-brutal-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse border border-black" />
+            <span className="font-heading font-black text-xs uppercase tracking-tight text-black">
+              LIVE CURRENCY CONVERSION ORACLE RATES:
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-xs font-bold flex-wrap">
+            <button
+              onClick={() => handleSelectCurrency("INR")}
+              className={`border-2 border-black px-2.5 py-1 rounded transition-all cursor-pointer ${selectedCurrency === "INR" ? "bg-primary font-black shadow-brutal-sm scale-105" : "bg-primary/20 text-black hover:bg-primary/40"}`}
+              title="Click to select INR"
+            >
+              RBI USD/INR: <span className="font-black">₹84.15</span>
+            </button>
+            <button
+              onClick={() => handleSelectCurrency("USD")}
+              className={`border-2 border-black px-2.5 py-1 rounded transition-all cursor-pointer ${selectedCurrency === "USD" ? "bg-primary font-black shadow-brutal-sm scale-105" : "bg-primary/20 text-black hover:bg-primary/40"}`}
+              title="Click to select USD"
+            >
+              USDC: <span className="font-black">$1.0001</span>
+            </button>
+            <button
+              onClick={() => handleSelectCurrency("EUR")}
+              className={`border-2 border-black px-2.5 py-1 rounded transition-all cursor-pointer ${selectedCurrency === "EUR" ? "bg-primary font-black shadow-brutal-sm scale-105" : "bg-primary/20 text-black hover:bg-primary/40"}`}
+              title="Click to select EUR"
+            >
+              EUR/USD: <span className="font-black">$1.0800</span> <span className="text-[10px] text-black/60">(₹90.88)</span>
+            </button>
+            <button
+              onClick={() => handleSelectCurrency("GBP")}
+              className={`border-2 border-black px-2.5 py-1 rounded transition-all cursor-pointer ${selectedCurrency === "GBP" ? "bg-primary font-black shadow-brutal-sm scale-105" : "bg-primary/20 text-black hover:bg-primary/40"}`}
+              title="Click to select GBP"
+            >
+              GBP/USD: <span className="font-black">$1.2800</span> <span className="text-[10px] text-black/60">(₹107.71)</span>
+            </button>
+            <div className="bg-sage border-2 border-black px-2.5 py-1 rounded text-black">
+              ETH: <span className="font-black">$3,200.00</span>
+            </div>
+          </div>
+        </div>
+
         {/* ── 3 Main Tab Buttons with Brutalist Spacing ───────── */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <button
@@ -719,25 +763,102 @@ export default function DonatePage() {
                 </div>
               </div>
 
-              {/* Interactive Gateway Mockup */}
-              <div className="border-2 border-black rounded-xl p-4 bg-white flex flex-col sm:flex-row items-center gap-4 shadow-brutal-sm">
-                <div className="w-28 h-28 bg-primary/20 border-2 border-black rounded-lg p-2 flex flex-col items-center justify-center shrink-0">
-                  <QrCode className="w-20 h-20 text-black" />
+              {/* Interactive Gateway Mockup with QR Code & Real-time Currency Conversion */}
+              <div className="border-2 border-black rounded-xl p-4 sm:p-5 bg-white flex flex-col sm:flex-row items-center gap-5 shadow-brutal-sm">
+                
+                {/* QR Code Graphic with Selected Currency Stamp */}
+                <div className="flex flex-col items-center gap-2 shrink-0">
+                  <div className="relative w-32 h-32 bg-primary/15 border-2 border-black rounded-xl p-2.5 flex flex-col items-center justify-center shadow-inner">
+                    <div className="relative flex items-center justify-center">
+                      <QrCode className="w-24 h-24 text-black" />
+                      {/* Center Currency Symbol Badge */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="w-8 h-8 rounded-full bg-primary border-2 border-black flex items-center justify-center font-heading font-black text-sm text-black shadow-brutal-xs">
+                          {activeCurrencyConfig.symbol}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="font-mono font-black text-[10px] uppercase text-black bg-primary px-2.5 py-0.5 rounded border border-black shadow-brutal-xs">
+                    SCAN TO PAY {selectedCurrency}
+                  </span>
                 </div>
 
-                <div className="flex flex-col gap-1.5 text-xs font-mono w-full">
-                  <div className="text-[10px] uppercase font-bold text-black/60">
-                    {activeCurrencyConfig.gatewayAccountLabel}
+                {/* Details Displayed Besides the QR Code */}
+                <div className="flex flex-col gap-2 font-mono text-xs w-full">
+                  
+                  {/* Selected Currency Badge */}
+                  <div className="flex items-center justify-between pb-1.5 border-b-2 border-black flex-wrap gap-1">
+                    <span className="text-[10px] uppercase font-bold text-black/60">
+                      Selected Currency:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-xs text-black bg-primary px-2.5 py-0.5 rounded border-2 border-black shadow-brutal-xs">
+                        {selectedCurrency} ({activeCurrencyConfig.symbol}) — {activeCurrencyConfig.name}
+                      </span>
+                    </div>
                   </div>
-                  <div className="font-bold text-black bg-primary/20 p-1.5 rounded border border-black truncate">
-                    {activeCurrencyConfig.gatewayAccountValue}
+
+                  {/* Destination Gateway Account / VPA */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] uppercase font-bold text-black/60">
+                      {activeCurrencyConfig.gatewayAccountLabel}
+                    </span>
+                    <div className="font-bold text-black bg-neutral-100 p-1.5 rounded border border-black truncate text-xs select-all">
+                      {activeCurrencyConfig.gatewayAccountValue}
+                    </div>
                   </div>
-                  <div className="text-black/80">
-                    Settlement Amount: <strong className="text-black font-extrabold">{activeCurrencyConfig.symbol}{fiatAmount.toLocaleString()} {selectedCurrency}</strong>
+
+                  {/* Selected Amount Displayed in Selected Currency */}
+                  <div className="flex items-center justify-between py-1 border-t border-b border-black/15">
+                    <span className="text-[11px] uppercase font-bold text-black/70">
+                      Amount:
+                    </span>
+                    <strong className="text-black font-extrabold text-sm sm:text-base">
+                      {activeCurrencyConfig.symbol}{fiatAmount.toLocaleString(selectedCurrency === "INR" ? "en-IN" : "en-US", {
+                        minimumFractionDigits: selectedCurrency === "INR" ? 0 : 2,
+                        maximumFractionDigits: selectedCurrency === "INR" ? 0 : 2,
+                      })} {selectedCurrency}
+                    </strong>
                   </div>
-                  <div className="text-[11px] text-black/60">
-                    Minted onto Base Sepolia at $3,200/ETH benchmark
+
+                  {/* Live Conversion of Currency Rates */}
+                  <div className="flex items-center justify-between text-[11px] text-black/85 flex-wrap gap-1">
+                    <span className="font-bold text-black/60 uppercase text-[10px]">
+                      Conversion Rate:
+                    </span>
+                    <span className="font-bold text-black bg-sage px-2 py-0.5 rounded border border-black text-[11px]">
+                      {selectedCurrency === "INR" && "1 USD = ₹84.15 INR (1 INR ≈ $0.0119 USD)"}
+                      {selectedCurrency === "USD" && "1 USD = $1.0000 USD (≈ ₹84.15 INR)"}
+                      {selectedCurrency === "EUR" && "1 EUR = $1.0800 USD (≈ ₹90.88 INR)"}
+                      {selectedCurrency === "GBP" && "1 GBP = $1.2800 USD (≈ ₹107.71 INR)"}
+                    </span>
                   </div>
+
+                  {/* Auto-converts to USDC.e line (Preserving Exact Image Spec) */}
+                  <div className="flex items-center justify-between text-[11px] bg-primary/20 p-1.5 rounded border border-black">
+                    <span className="font-bold text-black/80 uppercase text-[10px]">
+                      Auto-converts to:
+                    </span>
+                    <strong className="font-extrabold text-black text-xs">
+                      ~{liveUsdcValue.toFixed(2)} USDC.e
+                    </strong>
+                  </div>
+
+                  {/* Secondary Currency Equivalents */}
+                  <div className="flex items-center justify-between text-[10px] text-black/70 pt-0.5 flex-wrap gap-1">
+                    <span>
+                      {selectedCurrency === "INR" ? (
+                        <span>Equivalent: <strong>${liveUsdValue.toFixed(2)} USD</strong></span>
+                      ) : (
+                        <span>Equivalent: <strong>₹{liveInrValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })} INR</strong></span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-black/60">
+                      Escrow: ~{liveEthValue.toFixed(4)} ETH (@ $3,200 benchmark)
+                    </span>
+                  </div>
+
                 </div>
               </div>
 
