@@ -186,6 +186,8 @@ export interface LedgerContextValue {
     purposeName?: string;
     notes?: string;
   }) => Promise<VolunteerServiceRecord>;
+  latestDonorTx: LedgerTransaction | null;
+  setLatestDonorTx: (tx: LedgerTransaction | null) => void;
 }
 
 export interface BankStatementFreshness {
@@ -578,6 +580,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
   );
   const [recentTxs, setRecentTxs] =
     useState<LedgerTransaction[]>(INITIAL_TRANSACTIONS);
+  const [latestDonorTx, setLatestDonorTx] = useState<LedgerTransaction | null>(null);
   const [tranches, setTranches] = useState<TrancheState[]>(
     seedData.tranches as TrancheState[]
   );
@@ -818,6 +821,11 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
           setTrustScore(32);
         }
       }
+
+      const savedLatest = localStorage.getItem("LATEST_DONOR_TX");
+      if (savedLatest) {
+        setLatestDonorTx(JSON.parse(savedLatest));
+      }
     } catch {
       // Ignore parse errors, fallback to seed
     } finally {
@@ -826,6 +834,11 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
 
     // Cross-tab synchronization
     const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "LATEST_DONOR_TX" && e.newValue) {
+        try {
+          setLatestDonorTx(JSON.parse(e.newValue));
+        } catch {}
+      }
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
@@ -964,11 +977,30 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
           displayAmount = `${params.amount.toLocaleString()} USDC`;
         }
       } else {
-        // UPI (INR)
-        amountInr = params.amount;
-        amountUsd = params.amount / inrRate;
-        amountEth = amountUsd / ethRate;
-        displayAmount = `₹${params.amount.toLocaleString()}`;
+        // Fiat rails (INR, USD, EUR, GBP)
+        const tok = (params.token || "INR").toUpperCase();
+        if (tok === "USD") {
+          amountUsd = params.amount;
+          amountInr = amountUsd * inrRate;
+          amountEth = amountUsd / ethRate;
+          displayAmount = `$${params.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD`;
+        } else if (tok === "EUR") {
+          amountUsd = params.amount * 1.08;
+          amountInr = amountUsd * inrRate;
+          amountEth = amountUsd / ethRate;
+          displayAmount = `€${params.amount.toLocaleString("en-EU", { minimumFractionDigits: 2 })} EUR`;
+        } else if (tok === "GBP") {
+          amountUsd = params.amount * 1.28;
+          amountInr = amountUsd * inrRate;
+          amountEth = amountUsd / ethRate;
+          displayAmount = `£${params.amount.toLocaleString("en-GB", { minimumFractionDigits: 2 })} GBP`;
+        } else {
+          // Default INR
+          amountInr = params.amount;
+          amountUsd = params.amount / inrRate;
+          amountEth = amountUsd / ethRate;
+          displayAmount = `₹${params.amount.toLocaleString("en-IN")} INR`;
+        }
       }
 
       // Generate realistic deterministic hash
@@ -1029,31 +1061,33 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
       // If Non-Cash in-kind donation or Volunteer Service, record in live transaction feed without diluting liquid cash escrow
       if (!isNonCash && !isVolunteer) {
         const finalEth = Number(amountEth.toFixed(4));
-        setTotalDonated(finalEth);
-        setVaultBalance(finalEth);
+        setTotalDonated((prev) => Number((prev + finalEth).toFixed(4)));
+        setVaultBalance((prev) => Number((prev + finalEth).toFixed(4)));
         setReleasedAmount(0.0);
 
         const t_splits = [0.20, 0.30, 0.30, 0.20];
-        const scaledTranches: TrancheState[] = seedData.tranches.map((t, idx) => {
-          const pct = t_splits[idx] ?? 0.25;
-          const tEth = Number((finalEth * pct).toFixed(4));
-          const tUsd = Number((tEth * ethRate).toFixed(2));
-          const tInr = Number((tUsd * inrRate).toFixed(2));
-          return {
-            ...t,
-            percentage: Math.round(pct * 100),
-            amountEth: tEth,
-            amountUsd: tUsd,
-            amountInr: tInr,
-            status: (idx === 0 ? "PENDING_VERIFICATION" : "LOCKED") as TrancheState["status"],
-            badge: idx === 0 ? "CURRENT EARMARK" : "LOCKED",
-            releasedAt: null,
-            verifiedNullifier: null,
-            releaseTxHash: null,
-          };
+        setTranches((prev) => {
+          const totalPool = (totalDonated || 50.0) + finalEth;
+          return prev.map((t, idx) => {
+            const pct = t_splits[idx] ?? 0.25;
+            const tEth = Number((totalPool * pct).toFixed(4));
+            const tUsd = Number((tEth * ethRate).toFixed(2));
+            const tInr = Number((tUsd * inrRate).toFixed(2));
+            return {
+              ...t,
+              percentage: Math.round(pct * 100),
+              amountEth: tEth,
+              amountUsd: tUsd,
+              amountInr: tInr,
+            };
+          });
         });
-        setTranches(scaledTranches);
       }
+
+      setLatestDonorTx(newTx);
+      try {
+        localStorage.setItem("LATEST_DONOR_TX", JSON.stringify(newTx));
+      } catch {}
 
       setRecentTxs((prev) => [newTx, ...prev]);
       return newTx;
@@ -1122,7 +1156,7 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
         amountInr: 0,
         rail: "CRYPTO",
         token: "ETH",
-        purpose: `🚨 EMERGENCY AUTO-FREEZE: ${reason}`,
+        purpose: `[EMERGENCY AUTO-FREEZE]: ${reason}`,
         txHash:
           offendingTxHash ||
           "0xdead000199f2b4c8e1a33d77f9081c2b3a4d5e6f708192a3b4c5d6e7f8091a2b",
@@ -1187,6 +1221,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     volunteerServices,
     volunteerImpact,
     logVolunteerService,
+    latestDonorTx,
+    setLatestDonorTx,
   };
 
   return (

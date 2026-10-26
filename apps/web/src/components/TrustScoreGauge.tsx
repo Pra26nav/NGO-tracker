@@ -290,19 +290,19 @@ export function TrustScoreGauge({
           <div className="flex items-center justify-between gap-4">
             <span className="text-slate-400">Semantic Nullifier Uniqueness:</span>
             <span className={score >= 75 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-              {score >= 75 ? "✓ 100% Unique" : "🚨 Collision (Hamming=2)"}
+              {score >= 75 ? "100% Unique" : "[COLLISION] (Hamming=2)"}
             </span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-slate-400">ELA Pixel Compression:</span>
             <span className={score >= 75 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-              {score >= 75 ? "✓ Uniform (5.1/50)" : "🚨 Anomaly (38.7/50)"}
+              {score >= 75 ? "Uniform (5.1/50)" : "[ANOMALY] (38.7/50)"}
             </span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <span className="text-slate-400">Decentralized 2/3 Quorum:</span>
             <span className={score >= 75 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-              {score >= 75 ? "✓ 2/3 Agreed" : "🚨 2/3 Quorum Freeze"}
+              {score >= 75 ? "2/3 Agreed" : "[QUORUM FREEZE]"}
             </span>
           </div>
         </div>
@@ -315,7 +315,7 @@ export function TrustScoreGauge({
           className="mt-4 p-3.5 rounded-xl border border-red-500/60 bg-red-950/70 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse flex items-center justify-between gap-3 text-xs"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-lg">🚨</span>
+            <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-red-500 text-white">[ALERT]</span>
             <div>
               <strong className="text-red-200">
                 CRITICAL WARNING: Trust Score Dropped to {score}/100

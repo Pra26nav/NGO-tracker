@@ -2,190 +2,119 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import seedData from "@/data/campaign-seed.json";
 import {
   Play,
   Pause,
   RotateCcw,
-  FastForward,
   ShieldAlert,
   ShieldCheck,
   Lock,
-  Unlock,
-  Coins,
-  FileSearch,
-  AlertTriangle,
-  CheckCircle2,
   ArrowRight,
   ExternalLink,
-  Zap,
-  Flame,
-  Eye,
   Layers,
+  Activity,
+  Copy,
+  Check,
+  CheckCircle2,
   Terminal,
   Cpu,
-  Sparkles,
-  RefreshCw,
-  FileText,
-  Activity,
-  Check,
-  Copy,
-  Sliders,
-  ChevronRight,
-  Globe,
-  Radio,
-  Clock,
-  ArrowUpRight,
-  AlertOctagon,
+  Eye,
+  FileSearch,
 } from "lucide-react";
 
-/* ────────────────────────────────────────────────────────────
-   Attack Story Stage Definitions (20-Second Script)
-──────────────────────────────────────────────────────────── */
 interface StoryStage {
   id: number;
+  numberTag: string;
   title: string;
-  badge: string;
-  badgeColor: "emerald" | "indigo" | "amber" | "red";
-  timeRange: [number, number]; // seconds [start, end]
   label: string;
   shortDesc: string;
-  headline: string;
-  details: string;
-  keyMetric: { label: string; value: string };
+  timeRange: [number, number];
   escrowStatus: "ACTIVE" | "VERIFYING" | "ALERT" | "FROZEN";
-  vaultBalance: number;
-  releasedAmount: number;
-  activeTx: string;
+  activeAlert?: string;
+  dctPhash: string;
 }
 
 const STORY_STAGES: StoryStage[] = [
   {
     id: 1,
-    title: "Stage 1: Donate & Earmark Lock",
-    badge: "00-03s • DONATION LOCKED",
-    badgeColor: "emerald",
-    timeRange: [0, 3],
-    label: "🟢 Donate & Lock",
-    shortDesc: "50.0 ETH locked into PurposeBoundEscrow.sol with strict Keccak-256 earmark",
-    headline: "Philanthropic Capital Committed to On-Chain Earmark Locker",
-    details:
-      "Donor 0x71C9...b901 deposits 50.00 ETH ($160,000 USD / ₹1,34,64,000). PurposeBoundEscrow.sol locks funds strictly to Keccak-256 commitment of 'Water Infrastructure'. No funds can leave without cryptographic milestone proof.",
-    keyMetric: { label: "Vault Locked", value: "50.00 ETH ($160,000)" },
+    numberTag: "STAGE 1 OF 5: DEPOSIT & EARMARK",
+    title: "STAGE 1: DONATION LOCKED",
+    label: "M1: DEPOSIT",
+    shortDesc: "50.0 ETH locked into PurposeBoundEscrow.sol earmarked for 'Water Infrastructure'",
+    timeRange: [0, 4],
     escrowStatus: "ACTIVE",
-    vaultBalance: 50.0,
-    releasedAmount: 0.0,
-    activeTx: "0x8a9f2c11d4e8b00192f3a1c55e67d89012b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+    dctPhash: "0000000000000000",
   },
   {
     id: 2,
-    title: "Stage 2: Valid Tranche 1 Release",
-    badge: "03-07s • TRANCHE RELEASED",
-    badgeColor: "emerald",
-    timeRange: [3, 7],
-    label: "✨ Valid Tranche Release",
-    shortDesc: "Tranche 1 (10.0 ETH) released upon legitimate hydrogeology milestone verification",
-    headline: "Phase 1 Mobilization Verified: 10.0 ETH Disbursed Safely to Vendor",
-    details:
-      "Vidarbha Geological submits legitimate invoice INV-2026-1001 for borewell mapping. AI forensics confirm 0 pHash collision and ELA pixel error = 1.2% (< 5%). Smart contract auto-releases 10.0 ETH; 40.0 ETH remains safe in vault.",
-    keyMetric: { label: "Disbursed / Remaining", value: "10.0 ETH / 40.0 ETH Safe" },
+    numberTag: "STAGE 2 OF 5: TRANCHE 1 RELEASE",
+    title: "STAGE 2: VALID TRANCHE RELEASE",
+    label: "M2: OCR",
+    shortDesc: "Vidarbha Geological submits INV-1001 for borewell survey. 10.0 ETH released safely.",
+    timeRange: [4, 8],
     escrowStatus: "ACTIVE",
-    vaultBalance: 40.0,
-    releasedAmount: 10.0,
-    activeTx: "0x9c00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+    dctPhash: "1A2B3C4D5E6F7A8B",
   },
   {
     id: 3,
-    title: "Stage 3: Milestone Receipt Upload & AI Forensics",
-    badge: "07-12s • AI AUDIT SCAN",
-    badgeColor: "indigo",
-    timeRange: [7, 12],
-    label: "📸 Receipt Upload & AI Check",
-    shortDesc: "NGO uploads receipt; engine runs 64-bit DCT pHash & Error Level Analysis (ELA)",
-    headline: "Autonomous Verification Pipeline: Generating Cryptographic Invariants",
-    details:
-      "NGO uploads milestone receipt INV-2026-8841. The verifier parses OCR categories, computes deterministic Semantic Nullifier (keccak256(TaxID | InvNo | Date | Amount)), generates 64-bit DCT pHash, and analyzes 8x8 DCT compression grids.",
-    keyMetric: { label: "Scanning Invariant", value: "pHash + Semantic Nullifier" },
+    numberTag: "STAGE 3 OF 5: AI FORENSICS SCAN",
+    title: "STAGE 3: RECEIPT UPLOAD & ELA",
+    label: "M3: MERKLE",
+    shortDesc: "NGO uploads Phase 2 claim. 64-bit DCT perceptual hashing and ELA compression scan.",
+    timeRange: [8, 12],
     escrowStatus: "VERIFYING",
-    vaultBalance: 40.0,
-    releasedAmount: 10.0,
-    activeTx: "0x3f9e8a002b11cd88a1e4599023ffaa12bb33445566778899aabbccddeeff0011",
+    dctPhash: "A4F09B22C1D88310",
   },
   {
     id: 4,
-    title: "Stage 4: Adversarial Attack Injected",
-    badge: "12-16s • EXPLOIT DETECTED",
-    badgeColor: "amber",
+    numberTag: "STAGE 4 OF 5: INJECTED CROP ATTACK",
+    title: "STAGE 4: ADVERSARIAL INJECTION",
+    label: "M4: CROP-ATTACK",
+    shortDesc: "Adversary crops receipt by 2px to mutate SHA-256 and attempts cross-pool double spend.",
     timeRange: [12, 16],
-    label: "⚠️ Adversarial Attack",
-    shortDesc: "Attacker crops receipt by 2px to mutate SHA-256 and attempts cross-donor double spend",
-    headline: "Adversarial Vector: Image Mutation & Cross-Pool Double Spending",
-    details:
-      "Adversary crops border by 2px to alter raw SHA-256 (0x77d1... != 0x4b1e...), attempting to re-claim ₹45,000 from Donor Pool B. Naive deduplication would fail, but Semantic Nullifiers and pHash (Hamming Dist = 2 < 5 threshold) flag the collision!",
-    keyMetric: { label: "Hamming Distance", value: "2 (< 5 Threshold: CLONE)" },
     escrowStatus: "ALERT",
-    vaultBalance: 40.0,
-    releasedAmount: 10.0,
-    activeTx: "0xdead000199f2b4c8e1a33d77f9081c2b3a4d5e6f708192a3b4c5d6e7f8091a2b",
+    activeAlert: "ADVERSARIAL 2PX CROP DOUBLE-SPEND INJECTED",
+    dctPhash: "F4C19A82BB04C810",
   },
   {
     id: 5,
-    title: "Stage 5: THE CLIMAX - Autonomous Vault Freeze",
-    badge: "16-20s • CIRCUIT BREAKER TRIPPED",
-    badgeColor: "red",
+    numberTag: "STAGE 5 OF 5: AUTONOMOUS FREEZE",
+    title: "STAGE 5: THE CLIMAX — VAULT FREEZE",
+    label: "M5: FREEZE",
+    shortDesc: "Nullifier collision detected in Donor_Pool_A! EscrowAutoFrozen() emitted on Base Sepolia.",
     timeRange: [16, 20],
-    label: "🔒 THE CLIMAX: Vault Freeze",
-    shortDesc: "EscrowAutoFrozen emitted on-chain; 40.0 ETH permanently shielded from theft",
-    headline: "CLIMAX: Autonomous Smart Contract Circuit Breaker Halts Escrow",
-    details:
-      "Nullifier collision confirmed against Donor_Pool_A! PurposeBoundEscrow.sol automatically triggers EscrowAutoFrozen with ZERO human intervention. 100% of remaining 40.0 ETH ($128,000 USD) is permanently protected.",
-    keyMetric: { label: "Capital Protected", value: "40.00 ETH ($128,000 USD)" },
     escrowStatus: "FROZEN",
-    vaultBalance: 40.0,
-    releasedAmount: 10.0,
-    activeTx: "0xdead000199f2b4c8e1a33d77f9081c2b3a4d5e6f708192a3b4c5d6e7f8091a2b",
+    activeAlert: "ESCROW AUTONOMOUSLY FROZEN: 40 ETH PROTECTED",
+    dctPhash: "F4C19A82BB04C810",
   },
 ];
 
-/* ────────────────────────────────────────────────────────────
-   Terminal Log Stream per Second
-──────────────────────────────────────────────────────────── */
-interface TerminalLog {
+interface LogEntry {
   timeSec: number;
-  source: string;
-  level: "INFO" | "SUCCESS" | "WARN" | "CRITICAL";
-  message: string;
+  timeLabel: string;
+  text: string;
+  type: "info" | "warn" | "critical" | "success";
 }
 
-const TERMINAL_LOGS: TerminalLog[] = [
-  { timeSec: 0.5, source: "EVM_ESCROW", level: "INFO", message: "PurposeBoundEscrow.createCampaign(id=1, earmark=0x4f8a91b2c3d4...)" },
-  { timeSec: 1.5, source: "GATEWAY", level: "SUCCESS", message: "DepositConfirmed: 50.00 ETH ($160,000 USD) locked into escrow contract" },
-  { timeSec: 2.5, source: "ESCROW_LEDGER", level: "INFO", message: "State committed: 4 tranches initialized (10/15/15/10 ETH). Vault balance: 50.0 ETH" },
-  { timeSec: 3.5, source: "ORACLE", level: "INFO", message: "Vidarbha Geological & Drilling Consultancy (GSTIN-27VWW001Z) submits INV-2026-1001" },
-  { timeSec: 4.8, source: "FORENSICS", level: "SUCCESS", message: "ELA score: 1.2% (Pass <= 5%). pHash distance: 28 (No collision). Category: Water Infrastructure" },
-  { timeSec: 6.0, source: "EVM_ESCROW", level: "SUCCESS", message: "ExpenditureVerified emitted! Tranche 1 (10.0 ETH) disbursed. Remaining balance: 40.0 ETH" },
-  { timeSec: 7.5, source: "RECEIPT_INGEST", level: "INFO", message: "NGO uploads Phase 2 claim: INV-2026-8841 (Nagpur Hydro Pipes Pvt Ltd, ₹45,000)" },
-  { timeSec: 9.0, source: "NULLIFIER_ENGINE", level: "INFO", message: "Computing Semantic Nullifier: keccak256(GSTIN-27AAACW1234F1Z5 | INV-2026-8841 | 2026-10-24 | 45000)" },
-  { timeSec: 10.5, source: "VISION_AI", level: "INFO", message: "64-bit DCT perceptual hash generated: a4f09b22c1d88310. Scanning 8x8 DCT grid..." },
-  { timeSec: 12.2, source: "SECURITY_RADAR", level: "WARN", message: "ADVERSARIAL INJECTION DETECTED: Image cropped by 2px to change raw SHA-256 hash" },
-  { timeSec: 13.8, source: "FORENSICS", level: "WARN", message: "High ELA anomaly around Total Amount (38.7% > 15.0%). Font kerning mismatch detected!" },
-  { timeSec: 15.2, source: "NULLIFIER_ENGINE", level: "CRITICAL", message: "COLLISION DETECTED: Semantic Nullifier 0x6e21... already claimed in Donor_Pool_A! Hamming Dist = 2" },
-  { timeSec: 16.5, source: "CIRCUIT_BREAKER", level: "CRITICAL", message: "EscrowAutoFrozen(nullifier=0x6e21..., reason='Cross-Donor Double Spend Detected') ON-CHAIN" },
-  { timeSec: 18.0, source: "SMART_CONTRACT", level: "CRITICAL", message: "ESCROW PERMANENTLY LOCKED. All further disbursements halted. 40.00 ETH saved from theft." },
-  { timeSec: 19.5, source: "AUDIT_SUMMARY", level: "SUCCESS", message: "Zero human intervention required. Forensic evidence anchored to block #20491892" },
+const TERMINAL_LOGS: LogEntry[] = [
+  { timeSec: 1.0, timeLabel: "[+01.00s]", text: "PurposeBoundEscrow: 50.00 ETH ($160,000) locked to 'Water Infrastructure'", type: "info" },
+  { timeSec: 4.5, timeLabel: "[+04.50s]", text: "Tranche 1 Payout: 10.00 ETH disbursed to Vidarbha Geological. Clean ELA 1.2%", type: "success" },
+  { timeSec: 9.0, timeLabel: "[+09.00s]", text: "Receipt Upload: INV-2026-8841 submitted. Parsing OCR fields...", type: "info" },
+  { timeSec: 12.1, timeLabel: "[+12.10s]", text: "OCR Pipeline: Processed invoice #INV-8891 ($24,500.00)", type: "info" },
+  { timeSec: 14.05, timeLabel: "[+14.05s]", text: "ATTACK VECTOR: Secondary claim submitted with 2px corner crop", type: "warn" },
+  { timeSec: 15.2, timeLabel: "[+15.20s]", text: "COLLISION: Nullifier 0x6e21... already claimed in Donor_Pool_A!", type: "critical" },
+  { timeSec: 16.5, timeLabel: "[+16.50s]", text: "EscrowAutoFrozen(campaignId=1, nullifier=0x6e21...) EMITTED ON BASE SEPOLIA", type: "critical" },
+  { timeSec: 18.0, timeLabel: "[+18.00s]", text: "SMART CONTRACT GUARD: VAULT LOCKED. 40.00 ETH permanently shielded.", type: "success" },
 ];
 
 export default function HomePage() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); // 0.0 to 20.0
-  const [hasStarted, setHasStarted] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-  const theaterRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(14.5);
+  const [copied, setCopied] = useState(false);
 
   const TOTAL_DURATION = 20.0;
 
-  // Active Story Stage based on current timestamp
+  // Find active stage
   const activeStage = useMemo(() => {
     return (
       STORY_STAGES.find(
@@ -194,741 +123,496 @@ export default function HomePage() {
     );
   }, [currentTime]);
 
-  // Is in climax window
-  const isClimax = currentTime >= 16.0;
-
-  // 20-Second High-Precision Animation Loop
+  // Run 20s animation loop
   useEffect(() => {
-    let animId: number;
-    let lastStamp: number | null = null;
-
-    const tick = (stamp: number) => {
-      if (lastStamp === null) lastStamp = stamp;
-      const deltaSec = (stamp - lastStamp) / 1000;
-      lastStamp = stamp;
-
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
       setCurrentTime((prev) => {
-        const next = prev + deltaSec;
-        if (next >= TOTAL_DURATION) {
-          setIsPlaying(false);
-          return TOTAL_DURATION;
+        if (prev >= TOTAL_DURATION) {
+          return 0;
         }
-        return next;
+        return Math.min(TOTAL_DURATION, +(prev + 0.1).toFixed(2));
       });
-
-      if (isPlaying) {
-        animId = requestAnimationFrame(tick);
-      }
-    };
-
-    if (isPlaying) {
-      animId = requestAnimationFrame(tick);
-    }
-
-    return () => {
-      if (animId) cancelAnimationFrame(animId);
-    };
+    }, 100);
+    return () => clearInterval(interval);
   }, [isPlaying]);
 
-  const handleStartStory = () => {
-    setHasStarted(true);
-    setCurrentTime(0);
-    setIsPlaying(true);
-    if (theaterRef.current) {
-      theaterRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+  const handleCopyContract = () => {
+    navigator.clipboard.writeText("0x71C3a89...4489B");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleTogglePlay = () => {
-    if (!hasStarted) setHasStarted(true);
-    if (currentTime >= TOTAL_DURATION) {
-      setCurrentTime(0);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying((prev) => !prev);
-    }
-  };
-
-  const handleReset = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-
-  const handleJumpToStage = (stage: StoryStage) => {
-    setHasStarted(true);
-    setCurrentTime(stage.timeRange[0] + 0.1);
-  };
-
-  const handleCopyCommitment = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
-  // Filter logs up to current time
-  const visibleLogs = useMemo(() => {
-    return TERMINAL_LOGS.filter((l) => l.timeSec <= currentTime);
-  }, [currentTime]);
+  const visibleLogs = TERMINAL_LOGS.filter((l) => l.timeSec <= currentTime);
 
   return (
-    <div
-      className={`min-h-screen text-slate-100 transition-colors duration-500 relative overflow-hidden ${
-        isClimax
-          ? "bg-slate-950/95 animate-red-strobe"
-          : "bg-gradient-to-b from-slate-950 via-[#070b16] to-[#030611]"
-      }`}
-    >
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
-
-      {/* Dynamic Ambient Aura */}
-      <div
-        className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] rounded-full blur-[140px] pointer-events-none transition-all duration-700 ${
-          isClimax
-            ? "bg-red-600/35"
-            : currentTime >= 12
-            ? "bg-amber-600/25"
-            : "bg-indigo-600/18"
-        }`}
-      />
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24">
-        {/* ── Top Super-Badge ── */}
-        <div className="flex justify-center mb-5">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.2)] backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-            <span className="text-[11px] font-bold tracking-wider uppercase bg-gradient-to-r from-indigo-300 via-sky-300 to-indigo-100 bg-clip-text text-transparent font-mono">
-              Autonomous Philanthropic Fraud Verifier • Hackathon Showcase
-            </span>
-          </div>
-        </div>
-
-        {/* ── Hero Title & Mission ── */}
-        <div className="text-center max-w-4xl mx-auto mb-8">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] mb-4">
-            <span className="bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              THE BLACK HOLE
-            </span>{" "}
-            <span className="bg-gradient-to-r from-indigo-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent">
-              LEDGER
-            </span>
-          </h1>
-          <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
-            Zero-Trust milestone escrow combining{" "}
-            <span className="text-indigo-300 font-semibold">Deterministic Semantic Nullifiers</span>,{" "}
-            <span className="text-cyan-300 font-semibold">Dual-Tier Perceptual Hashing</span>, and{" "}
-            <span className="text-emerald-300 font-semibold">Error Level Analysis (ELA)</span>{" "}
-            to auto-freeze NGO funds on-chain upon fraud detection with zero human gatekeepers.
-          </p>
-        </div>
-
-        {/* ── THE GRAND CTA BUTTON (Prominent, High-Contrast, Glowing) ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-          <button
-            id="btn-run-attack-story"
-            onClick={handleStartStory}
-            className="group relative inline-flex items-center justify-center gap-3.5 px-8 py-5 rounded-2xl text-lg sm:text-xl font-black tracking-tight text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-300 shadow-[0_0_35px_rgba(236,72,153,0.45)] hover:shadow-[0_0_60px_rgba(236,72,153,0.7)] animate-cta-glow transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] border border-white/25"
-          >
-            <span className="text-2xl group-hover:scale-125 transition-transform duration-300">
-              🚀
-            </span>
-            <span>Run Complete Attack Story</span>
-            <span className="text-xs px-2.5 py-1 rounded-md bg-white/20 font-mono font-bold tracking-wider uppercase border border-white/30 text-white/95">
-              20s Live Demo
-            </span>
-          </button>
-
-          <Link
-            href="/pitch"
-            className="inline-flex items-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 transition-all shadow-sm"
-          >
-            <span>🎯 1-Click Judge Pitch</span>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1" />
-          </Link>
-        </div>
-
-        {/* ── CINEMATIC THEATER CANVAS ── */}
-        <div
-          ref={theaterRef}
-          className={`relative rounded-3xl border transition-all duration-500 overflow-hidden shadow-2xl ${
-            isClimax
-              ? "cinema-red border-red-500/80 bg-[#120406]/95 animate-screen-shudder"
-              : activeStage.escrowStatus === "ALERT"
-              ? "border-amber-500/70 bg-[#140f06]/95"
-              : "cinema-emerald border-slate-800 bg-slate-950/90"
-          }`}
-        >
-          {/* Header Bar of the Theater */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-3.5 h-3.5 rounded-full ${
-                  isClimax
-                    ? "bg-red-500 animate-ping"
-                    : activeStage.escrowStatus === "ALERT"
-                    ? "bg-amber-400 animate-pulse"
-                    : "bg-emerald-400 animate-pulse"
-                }`}
-              />
-              <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
-                Live Autonomous Simulation Theater
-              </span>
-              <span className="hidden sm:inline text-xs text-slate-500">•</span>
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700">
-                {activeStage.badge}
+    <div className="w-full bg-dot-pattern min-h-screen text-black">
+      {/* ── Main Hero Section ────────────────────────────── */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-8 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Headline, Narrative & Pillars (7 cols) */}
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            
+            {/* Top Hackathon Tag Badge */}
+            <div className="inline-flex items-center gap-2 bg-white border-2 border-black px-3.5 py-1.5 rounded-lg shadow-brutal-sm w-fit">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary border border-black" />
+              <span className="font-heading font-black text-xs uppercase tracking-tight">
+                CASCADE 26 — THEME 4, PROBLEM STATEMENT 2
               </span>
             </div>
 
-            {/* Stage Timeline Controls */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleTogglePlay}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all"
+            {/* Massive Hero Headline */}
+            <div className="flex flex-col">
+              <h1 className="font-heading font-black text-5xl sm:text-6xl md:text-7xl leading-[0.92] tracking-tighter text-black uppercase">
+                VERIFY THE{" "}
+                <span className="inline-block bg-white border-2 border-black px-3 py-0.5 rounded-lg shadow-brutal ml-1 align-baseline">
+                  BLACK HOLE
+                </span>
+                <br />
+                INTO TRUST.
+              </h1>
+            </div>
+
+            {/* Subtitle */}
+            <p className="font-body text-base sm:text-lg text-black/85 max-w-2xl leading-relaxed">
+              Stop trusting unverified PDF receipts. The Black Hole Ledger binds 50 ETH to smart contract earmarks,
+              catches 2px-cropped double spend receipts via DCT perceptual hashing, and auto-freezes escrows on-chain.
+            </p>
+
+            {/* Action Buttons Row */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Link
+                href="/red-team"
+                className="btn-brutal bg-charcoal hover:bg-black text-white font-heading font-black text-sm uppercase px-6 py-3.5 rounded-lg flex items-center gap-3 tracking-tight shadow-brutal"
               >
-                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                <span>{isPlaying ? "Pause" : currentTime >= TOTAL_DURATION ? "Replay" : "Play"}</span>
-              </button>
+                <span>LAUNCH RED-TEAM LAB</span>
+                <ArrowRight className="w-4 h-4 text-primary" />
+              </Link>
 
               <button
-                onClick={handleReset}
-                title="Reset simulation to 0s"
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+                onClick={() => {
+                  setCurrentTime(0);
+                  setIsPlaying(true);
+                }}
+                className="btn-brutal bg-white hover:bg-sage text-black font-heading font-black text-sm uppercase px-6 py-3.5 rounded-lg flex items-center gap-3 tracking-tight shadow-brutal"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <Play className="w-4 h-4 fill-black" />
+                <span>WATCH 20S ATTACK THEATER</span>
               </button>
-
-              <div className="h-4 w-px bg-slate-800 mx-1" />
-
-              <span className="text-xs font-mono font-bold text-slate-400">
-                {currentTime.toFixed(1)}s / {TOTAL_DURATION.toFixed(1)}s
-              </span>
             </div>
-          </div>
 
-          {/* ── 20-Second Progress Bar with Stage Tick Marks ── */}
-          <div className="w-full bg-slate-900/80 h-2.5 relative border-b border-slate-800/80">
-            <div
-              className={`h-full transition-all duration-100 ${
-                isClimax
-                  ? "bg-gradient-to-r from-red-600 via-amber-500 to-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]"
-                  : activeStage.escrowStatus === "ALERT"
-                  ? "bg-gradient-to-r from-indigo-500 via-amber-400 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]"
-                  : "bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-              }`}
-              style={{ width: `${(currentTime / TOTAL_DURATION) * 100}%` }}
-            />
-            {/* Tick mark pills */}
-            <div className="absolute inset-0 flex justify-between px-1 pointer-events-none">
-              {STORY_STAGES.map((s, idx) => (
-                <div
-                  key={s.id}
-                  className="h-full w-0.5 bg-slate-700/60"
-                  style={{ left: `${(s.timeRange[0] / TOTAL_DURATION) * 100}%` }}
-                />
-              ))}
+            {/* Trust Checks Ribbon */}
+            <div className="bg-white border-2 border-black rounded-lg p-2.5 shadow-brutal-sm flex flex-wrap items-center justify-between gap-3 text-xs font-mono font-bold">
+              <div className="flex items-center gap-1.5 text-black">
+                <span className="text-brutal-green">✓</span>
+                <span>100% ON-CHAIN ESCROW</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-black">
+                <span className="text-brutal-green">✓</span>
+                <span>0 BYTES BENEFICIARY PII LEAKED</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-black">
+                <span className="text-brutal-green">✓</span>
+                <span>ZERO HUMAN DELAY</span>
+              </div>
             </div>
+
+            {/* Three Info Box Pills */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white border-2 border-black rounded-lg p-3 shadow-brutal-sm">
+                <div className="text-[10px] font-mono font-bold text-black/60 uppercase">EARMARK KECCAK</div>
+                <div className="text-xs font-mono font-extrabold text-black truncate pt-0.5">0x9d4e...a28c</div>
+              </div>
+
+              <div className="bg-white border-2 border-black rounded-lg p-3 shadow-brutal-sm">
+                <div className="text-[10px] font-mono font-bold text-black/60 uppercase">DCT HASH MATCH</div>
+                <div className="text-xs font-mono font-extrabold text-brutal-red uppercase pt-0.5">COLLISION DETECTED</div>
+              </div>
+
+              <div className="bg-white border-2 border-black rounded-lg p-3 shadow-brutal-sm">
+                <div className="text-[10px] font-mono font-bold text-black/60 uppercase">ZK-SALTED MERKLE</div>
+                <div className="text-xs font-mono font-extrabold text-black pt-0.5">142 Root Leaves</div>
+              </div>
+            </div>
+
           </div>
 
-          {/* ── 5 Stage Quick-Jump Selector Pills ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 bg-slate-950/70 border-b border-slate-800/60 text-xs font-mono">
-            {STORY_STAGES.map((st) => {
-              const isCurrent = activeStage.id === st.id;
-              const isPast = currentTime > st.timeRange[1];
-              return (
-                <button
-                  key={st.id}
-                  onClick={() => handleJumpToStage(st)}
-                  className={`px-3 py-2 rounded-xl text-left transition-all border flex items-center justify-between gap-1.5 ${
-                    isCurrent
-                      ? st.badgeColor === "red"
-                        ? "bg-red-500/20 border-red-500/70 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.3)] font-bold"
-                        : st.badgeColor === "amber"
-                        ? "bg-amber-500/20 border-amber-500/70 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-bold"
-                        : "bg-indigo-500/20 border-indigo-500/70 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.3)] font-bold"
-                      : isPast
-                      ? "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
-                      : "bg-slate-900/30 border-transparent text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  <span className="truncate">{st.label}</span>
-                  {isCurrent && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 animate-ping" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── Main Stage Showcase Screen ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-8">
-            {/* Left 7 Columns: Real-Time Visual State Matrix */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded tracking-wider border ${
-                      activeStage.badgeColor === "red"
-                        ? "bg-red-500/20 border-red-500/50 text-red-300"
-                        : activeStage.badgeColor === "amber"
-                        ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                        : "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                    }`}
-                  >
-                    Stage {activeStage.id} of 5 • {activeStage.timeRange[0]}s–{activeStage.timeRange[1]}s
-                  </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                    Time: {currentTime.toFixed(1)}s
+          {/* Right Column: ATTACK THEATER MONITOR Window Mockup (5 cols) */}
+          <div className="lg:col-span-5">
+            <div className="window-brutal shadow-brutal-lg">
+              
+              {/* Window Header Bar (macOS Traffic Light Dots + Title) */}
+              <div className="window-header justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="window-dot bg-[#ff5f56]" />
+                  <span className="window-dot bg-[#ffbd2e]" />
+                  <span className="window-dot bg-[#27c93f]" />
+                  <span className="text-white text-xs font-mono font-bold ml-2 tracking-tight">
+                    ATTACK-THEATER-MONITOR // V2.4-ACTIVE
                   </span>
                 </div>
+                <span className="text-[10px] font-mono font-bold text-primary bg-charcoal px-2 py-0.5 rounded border border-white/20">
+                  LIVE FEED
+                </span>
+              </div>
 
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 leading-tight">
-                  {activeStage.headline}
-                </h2>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                  {activeStage.details}
+              {/* Window Interior Content */}
+              <div className="p-4 sm:p-5 flex flex-col gap-4 bg-white">
+                
+                {/* Total Capital Locked Card */}
+                <div className="border-2 border-black rounded-lg p-3.5 bg-white flex items-center justify-between flex-wrap gap-2 shadow-brutal-sm">
+                  <div>
+                    <div className="text-[10px] font-mono font-bold text-black/60 uppercase tracking-wider">
+                      TOTAL CAPITAL LOCKED
+                    </div>
+                    <div className="flex items-baseline gap-2 pt-0.5">
+                      <span className="font-heading font-black text-2xl text-black">50.00 ETH</span>
+                      <span className="text-xs font-mono text-black/60">($160,000.00)</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="bg-sage text-black font-mono font-bold text-xs px-2.5 py-1 rounded border border-black">
+                      +20% Verified
+                    </span>
+                    <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded border border-black flex items-center gap-1.5 ${
+                      activeStage.escrowStatus === "FROZEN"
+                        ? "bg-brutal-red text-white"
+                        : "bg-sage text-black"
+                    }`}>
+                      <span className="w-2 h-2 rounded-full bg-black" />
+                      <span>ESCROW: {activeStage.escrowStatus}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stage Info Card & Progress Scrubber */}
+                <div className="border-2 border-black rounded-lg p-3.5 bg-primary/20 flex flex-col gap-3">
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="bg-charcoal text-white px-2 py-1 rounded border border-black">
+                      {activeStage.numberTag}
+                    </span>
+                    <span className="text-black">
+                      T +{currentTime.toFixed(2)}s / 20.00s
+                    </span>
+                  </div>
+
+                  {/* Active Alert Banner */}
+                  {activeStage.activeAlert && (
+                    <div className="border-2 border-black rounded bg-white p-2 flex items-center gap-2 text-xs font-heading font-extrabold text-black">
+                      <ShieldAlert className="w-4 h-4 text-brutal-red shrink-0" />
+                      <span className="uppercase tracking-tight">{activeStage.activeAlert}</span>
+                    </div>
+                  )}
+
+                  {/* Scrubber Pipeline Progress */}
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <div className="flex justify-between text-[10px] font-mono font-bold text-black/70 uppercase">
+                      <span>M1: DEPOSIT</span>
+                      <span>M2: OCR</span>
+                      <span>M3: MERKLE</span>
+                      <span className="text-brutal-red font-black">M4: CROP-ATTACK</span>
+                      <span>M5: FREEZE</span>
+                    </div>
+
+                    {/* Progress Bar Container */}
+                    <div className="w-full h-3.5 bg-white border-2 border-black rounded-full overflow-hidden flex shadow-brutal-sm">
+                      <div
+                        className="h-full bg-charcoal transition-all duration-100"
+                        style={{ width: `${(currentTime / TOTAL_DURATION) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Playback Controls & DCT pHash Pill */}
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="btn-brutal bg-white hover:bg-sage text-black font-mono font-bold text-xs px-3 py-1 rounded flex items-center gap-1.5"
+                      >
+                        {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        <span>{isPlaying ? "PAUSE" : "PLAY"}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setCurrentTime(0)}
+                        className="btn-brutal bg-white hover:bg-sage text-black font-mono font-bold text-xs px-2.5 py-1 rounded flex items-center gap-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>RESTART</span>
+                      </button>
+                    </div>
+
+                    <div className="text-[10px] font-mono font-bold bg-white px-2 py-1 rounded border border-black">
+                      DCT PHASH: <span className="text-black font-black">{activeStage.dctPhash}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Event Bus Subscriber Terminal */}
+                <div className="border-2 border-black rounded-lg bg-charcoal text-white p-3 flex flex-col gap-2 font-mono text-xs">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/20 text-[10px]">
+                    <span className="text-white/60">EVENT_BUS_SUBSCRIBER // BASE_SEPOLIA</span>
+                    <span className="text-primary font-bold">RPC SYNCED</span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto no-scrollbar font-mono text-[11px] leading-tight">
+                    {visibleLogs.slice(-4).map((log, idx) => (
+                      <div key={idx} className="flex items-start gap-1.5">
+                        <span className="text-primary/70 shrink-0">{log.timeLabel}</span>
+                        <span
+                          className={
+                            log.type === "critical"
+                              ? "text-brutal-red font-bold"
+                              : log.type === "warn"
+                              ? "text-primary font-bold"
+                              : log.type === "success"
+                              ? "text-brutal-green font-bold"
+                              : "text-white/80"
+                          }
+                        >
+                          {log.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-white/20 flex items-center justify-between text-[10px] text-white/50">
+                    <span className="flex items-center gap-1 text-white">
+                      <ShieldCheck className="w-3 h-3 text-brutal-green" />
+                      <span>SMART CONTRACT GUARD: ACTIVE</span>
+                    </span>
+                    <span className="font-mono">GAS: 142,309 GWEI</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── Three Pillars Section (Yellow, Sage, White Cards) ── */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Pillar 01: Purpose-Bound Escrow (Yellow Card) */}
+          <div className="card-brutal-yellow p-6 rounded-xl flex flex-col justify-between gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="bg-charcoal text-white text-[10px] font-mono font-bold px-2 py-1 rounded border border-black uppercase tracking-wider">
+                  PILLAR 01 // CAPITAL CONTROL
+                </span>
+                <Lock className="w-5 h-5 text-black" />
+              </div>
+
+              <h2 className="font-heading font-black text-2xl text-black uppercase tracking-tight">
+                PURPOSE-BOUND ESCROW
+              </h2>
+
+              <p className="font-body text-xs sm:text-sm text-black/85 leading-relaxed">
+                Capital is never sent in bulk to opaque intermediary accounts. 50 ETH remains locked in strict EVM state
+                until Keccak-256 purpose earmarks are cryptographically satisfied.
+              </p>
+            </div>
+
+            <div className="border-t-2 border-black pt-4 flex flex-col gap-2 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">Earmark Lock:</span>
+                <span className="bg-primary px-2 py-0.5 rounded border border-black font-bold">50.00 ETH ($160K)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">Disbursement Rule:</span>
+                <span className="font-bold">Automated Milestone Quorum</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pillar 02: DCT Perceptual Hashing & ELA (Sage Card) */}
+          <div className="card-brutal-sage p-6 rounded-xl flex flex-col justify-between gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="bg-charcoal text-white text-[10px] font-mono font-bold px-2 py-1 rounded border border-black uppercase tracking-wider">
+                  PILLAR 02 // FORENSIC VISION
+                </span>
+                <Eye className="w-5 h-5 text-black" />
+              </div>
+
+              <h2 className="font-heading font-black text-2xl text-black uppercase tracking-tight">
+                DCT PERCEPTUAL HASHING &amp; ELA
+              </h2>
+
+              <p className="font-body text-xs sm:text-sm text-black/85 leading-relaxed">
+                Catches 2px-cropped duplicate invoices, altered receipt numbers, and Photoshop error-level doctoring before
+                release. Colliding perceptual hashes immediately lock the vault.
+              </p>
+            </div>
+
+            <div className="border-t-2 border-black pt-4 flex flex-col gap-2 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">Detection Latency:</span>
+                <span className="bg-white px-2 py-0.5 rounded border border-black font-bold">&lt; 420 ms</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">Duplicate Evasion:</span>
+                <span className="font-bold text-brutal-red uppercase">MATHEMATICALLY IMPOSSIBLE</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pillar 03: Zero-PII Beneficiary Shield (White Card) */}
+          <div className="card-brutal p-6 rounded-xl flex flex-col justify-between gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="bg-charcoal text-white text-[10px] font-mono font-bold px-2 py-1 rounded border border-black uppercase tracking-wider">
+                  PILLAR 03 // HUMAN INTEGRITY
+                </span>
+                <ShieldCheck className="w-5 h-5 text-black" />
+              </div>
+
+              <h2 className="font-heading font-black text-2xl text-black uppercase tracking-tight">
+                ZERO-PII BENEFICIARY SHIELD
+              </h2>
+
+              <p className="font-body text-xs sm:text-sm text-black/85 leading-relaxed">
+                142 rural households committed via salted Merkle trees. Donors verify exact receipt attribution without
+                exposing names, bank accounts, or sensitive home addresses to the public chain.
+              </p>
+            </div>
+
+            <div className="border-t-2 border-black pt-4 flex flex-col gap-2 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">PII Leaked To Chain:</span>
+                <span className="bg-sage text-black px-2 py-0.5 rounded border border-black font-bold">0 BYTES</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-black/70">Proof Method:</span>
+                <span className="font-bold">Poseidon Hash Salted Leaves</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 04 The 20-Second On-Chain Circuit ─────────────── */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 pb-16">
+        <div className="card-brutal p-6 sm:p-8 rounded-2xl flex flex-col gap-6">
+          
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b-2 border-black">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 bg-charcoal text-white font-heading font-black text-base flex items-center justify-center rounded border-2 border-black shadow-brutal-sm">
+                04
+              </span>
+              <div>
+                <h3 className="font-heading font-black text-xl sm:text-2xl text-black uppercase tracking-tight">
+                  THE 20-SECOND ON-CHAIN CIRCUIT
+                </h3>
+                <p className="font-mono text-xs text-black/60 uppercase">
+                  HOW THE BLACK HOLE LEDGER DESTROYS FRAUD AT THE PROTOCOL LAYER
                 </p>
               </div>
-
-              {/* Dynamic State Machine Display Card */}
-              <div
-                className={`p-5 rounded-2xl border transition-all duration-500 backdrop-blur-md ${
-                  isClimax
-                    ? "bg-red-950/40 border-red-500/60 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
-                    : activeStage.escrowStatus === "ALERT"
-                    ? "bg-amber-950/30 border-amber-500/50"
-                    : "bg-slate-900/60 border-slate-800"
-                }`}
-              >
-                {/* 3 Live Metric Badges */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80">
-                    <div className="text-[10px] uppercase font-mono text-slate-400 font-semibold mb-1">
-                      Escrow Vault Status
-                    </div>
-                    <div
-                      className={`text-sm sm:text-base font-black font-mono flex items-center gap-1.5 ${
-                        isClimax
-                          ? "text-red-400"
-                          : activeStage.escrowStatus === "ALERT"
-                          ? "text-amber-400"
-                          : "text-emerald-400"
-                      }`}
-                    >
-                      {isClimax ? (
-                        <>
-                          <Lock className="w-4 h-4 shrink-0 text-red-400" />
-                          <span>FROZEN</span>
-                        </>
-                      ) : activeStage.escrowStatus === "ALERT" ? (
-                        <>
-                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-                          <span>ALERT</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-                          <span>ACTIVE</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80">
-                    <div className="text-[10px] uppercase font-mono text-slate-400 font-semibold mb-1">
-                      Vault Balance
-                    </div>
-                    <div className="text-sm sm:text-base font-black font-mono text-white">
-                      {activeStage.vaultBalance.toFixed(1)} ETH
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80">
-                    <div className="text-[10px] uppercase font-mono text-slate-400 font-semibold mb-1">
-                      Released / Protected
-                    </div>
-                    <div
-                      className={`text-sm sm:text-base font-black font-mono ${
-                        isClimax ? "text-red-400" : "text-indigo-300"
-                      }`}
-                    >
-                      {isClimax
-                        ? "40.0 ETH PROTECTED"
-                        : `${activeStage.releasedAmount.toFixed(1)} ETH Disbursed`}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Simulated Visual Artifact or Heatmap */}
-                {isClimax || activeStage.id === 4 ? (
-                  /* Red-Team Climax: ELA Heatmap & Forensic Flag */
-                  <div className="p-4 rounded-xl bg-black/60 border border-red-500/40 relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <AlertOctagon className="w-4 h-4 text-red-400" />
-                        <span className="text-xs font-mono font-bold text-red-300">
-                          FORENSIC ELA HEATMAP • HIGH COMPRESSION ANOMALY
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40">
-                        SCORE: 38.7% (ALERT &gt; 15.0%)
-                      </span>
-                    </div>
-
-                    {/* Synthetic Visual ELA Canvas Representation */}
-                    <div className="w-full h-24 rounded-lg bg-[#0b0e17] border border-red-900/50 p-2 relative flex items-center justify-between overflow-hidden">
-                      {/* Wireframe simulated receipt */}
-                      <div className="space-y-1.5 w-1/2">
-                        <div className="h-2 w-3/4 rounded bg-slate-800" />
-                        <div className="h-2 w-1/2 rounded bg-slate-800" />
-                        <div className="h-2 w-5/6 rounded bg-slate-800" />
-                      </div>
-
-                      {/* Hot Tampered Region */}
-                      <div className="w-44 h-16 rounded border-2 border-red-500 bg-red-600/30 flex flex-col items-center justify-center text-center p-1 relative shadow-[0_0_20px_rgba(239,68,68,0.5)]">
-                        <span className="text-[10px] font-mono font-bold text-red-200">
-                          TAMPERED TOTAL
-                        </span>
-                        <span className="text-xs font-mono font-black text-white">
-                          ₹45,000 (CROPPED)
-                        </span>
-                        <span className="text-[9px] text-red-300 font-mono">
-                          Hamming Dist: 2 &lt; 5
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 text-[11px] font-mono text-red-200 flex items-center justify-between">
-                      <span>Collision: Claimed in Donor_Pool_A</span>
-                      <span className="text-red-400 font-bold">CIRCUIT BREAKER: TRIPPED</span>
-                    </div>
-                  </div>
-                ) : activeStage.id === 3 ? (
-                  /* Stage 3: Scanning Invariants */
-                  <div className="p-4 rounded-xl bg-black/60 border border-indigo-500/40 relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileSearch className="w-4 h-4 text-indigo-400" />
-                        <span className="text-xs font-mono font-bold text-indigo-300">
-                          AI SCANNING ENGINE: DCT PERCEPTUAL HASH & ELA
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                        SCANNING...
-                      </span>
-                    </div>
-
-                    {/* Scanning Beam Visual */}
-                    <div className="w-full h-20 rounded-lg bg-slate-900 border border-indigo-900/60 p-3 relative overflow-hidden flex items-center justify-between">
-                      <div className="absolute inset-0 scan-beam pointer-events-none" />
-                      <div>
-                        <div className="text-xs font-mono text-slate-300">
-                          Invoice: <span className="text-indigo-400 font-bold">INV-2026-8841</span>
-                        </div>
-                        <div className="text-[11px] font-mono text-slate-400 mt-1">
-                          Semantic Nullifier: 0x6e21a9b8d4c177e0...
-                        </div>
-                      </div>
-                      <div className="text-right font-mono text-xs text-indigo-300">
-                        <div>DCT pHash: a4f09b22c1d88310</div>
-                        <div className="text-[10px] text-emerald-400">ELA Baseline: 4.2% (PASS)</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* Stages 1 & 2: Active Clean Escrow State */
-                  <div className="p-4 rounded-xl bg-black/60 border border-emerald-500/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Coins className="w-4 h-4 text-emerald-400" />
-                        <span className="text-xs font-mono font-bold text-emerald-300">
-                          ON-CHAIN ESCROW MILESTONES (10 / 15 / 15 / 10 ETH)
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                        50.0 ETH TOTAL
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 text-center text-xs font-mono">
-                      <div
-                        className={`p-2 rounded-lg border ${
-                          activeStage.id >= 2
-                            ? "bg-emerald-950/40 border-emerald-500/60 text-emerald-300 font-bold"
-                            : "bg-slate-900/80 border-slate-800 text-slate-400"
-                        }`}
-                      >
-                        <div className="text-[10px] text-slate-400">Tranche 1</div>
-                        <div className="text-xs">10.0 ETH</div>
-                        <div className="text-[9px] mt-0.5">
-                          {activeStage.id >= 2 ? "RELEASED" : "READY"}
-                        </div>
-                      </div>
-
-                      <div className="p-2 rounded-lg border bg-slate-900/80 border-slate-800 text-slate-400">
-                        <div className="text-[10px] text-slate-400">Tranche 2</div>
-                        <div className="text-xs">15.0 ETH</div>
-                        <div className="text-[9px] mt-0.5">PENDING</div>
-                      </div>
-
-                      <div className="p-2 rounded-lg border bg-slate-900/80 border-slate-800 text-slate-400">
-                        <div className="text-[10px] text-slate-400">Tranche 3</div>
-                        <div className="text-xs">15.0 ETH</div>
-                        <div className="text-[9px] mt-0.5">LOCKED</div>
-                      </div>
-
-                      <div className="p-2 rounded-lg border bg-slate-900/80 border-slate-800 text-slate-400">
-                        <div className="text-[10px] text-slate-400">Tranche 4</div>
-                        <div className="text-xs">10.0 ETH</div>
-                        <div className="text-[9px] mt-0.5">LOCKED</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Right 5 Columns: Live Forensic Audit Terminal */}
-            <div className="lg:col-span-5 flex flex-col h-full">
-              <div className="terminal-window rounded-2xl flex-1 flex flex-col overflow-hidden border border-slate-800 shadow-xl min-h-[380px]">
-                {/* Terminal Title Bar */}
-                <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-                    </div>
-                    <span className="text-xs font-mono font-bold text-slate-400 ml-2">
-                      terminal://blackhole.audit
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                      EV_BLOCK #20491892
-                    </span>
-                  </div>
-                </div>
-
-                {/* Terminal Body with Streaming Logs */}
-                <div className="p-4 flex-1 overflow-y-auto space-y-2 text-xs font-mono terminal-scroll">
-                  {visibleLogs.length === 0 ? (
-                    <div className="text-slate-500 italic flex items-center gap-2 pt-6 justify-center">
-                      <Radio className="w-4 h-4 animate-pulse" />
-                      <span>Ready to run simulation. Click the button above to begin...</span>
-                    </div>
-                  ) : (
-                    visibleLogs.map((log, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-1.5 rounded transition-colors ${
-                          log.level === "CRITICAL"
-                            ? "bg-red-950/40 text-red-300 border-l-2 border-red-500"
-                            : log.level === "WARN"
-                            ? "bg-amber-950/40 text-amber-300 border-l-2 border-amber-500"
-                            : log.level === "SUCCESS"
-                            ? "bg-emerald-950/30 text-emerald-300 border-l-2 border-emerald-500"
-                            : "text-slate-300 hover:bg-slate-900/50"
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="text-[10px] text-slate-500 shrink-0 font-bold">
-                            [{log.timeSec.toFixed(1)}s]
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-1 rounded shrink-0 ${
-                              log.level === "CRITICAL"
-                                ? "bg-red-500/20 text-red-400"
-                                : log.level === "WARN"
-                                ? "bg-amber-500/20 text-amber-400"
-                                : log.level === "SUCCESS"
-                                ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-slate-800 text-indigo-300"
-                            }`}
-                          >
-                            {log.source}
-                          </span>
-                          <span className="break-words leading-tight">{log.message}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Terminal Footer with Action Buttons */}
-                <div className="p-3 bg-slate-900/80 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
-                  <div className="text-slate-400 flex items-center gap-1.5 truncate">
-                    <span>Tx:</span>
-                    <span className="text-slate-300 truncate max-w-[170px]">
-                      {activeStage.activeTx}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleCopyCommitment(activeStage.activeTx)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors text-[11px]"
-                  >
-                    {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    <span>{isCopied ? "Copied" : "Copy"}</span>
-                  </button>
-                </div>
-              </div>
+            <div className="bg-primary border-2 border-black px-3 py-1 rounded text-xs font-mono font-bold">
+              ZERO HUMAN DISCRETION
             </div>
           </div>
 
-          {/* ── Bottom Bar of Theater: Quick Skip & Manual Exploration ── */}
-          <div className="px-6 py-4 border-t border-slate-800/80 bg-slate-900/50 flex flex-wrap items-center justify-between gap-4">
-            <div className="text-xs text-slate-400">
-              <span className="font-semibold text-slate-200">Fault-Tolerant UX Principle:</span> All
-              math proofs are bound directly to <code className="text-indigo-300 font-mono">campaign-seed.json</code> and work 100% offline.
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleJumpToStage(STORY_STAGES[4])}
-                className="text-xs font-mono font-bold text-red-400 hover:text-red-300 underline underline-offset-4"
-              >
-                Fast-Forward to Climax (Stage 5)
-              </button>
-              <button
-                onClick={handleReset}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all"
-              >
-                Skip / Reset
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── CORE PILLARS & ARCHITECTURE ── */}
-        <div className="mt-20">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-indigo-400 mb-2">
-              The Cryptographic Arsenal
-            </h2>
-            <h3 className="text-3xl sm:text-4xl font-black text-white">
-              Why Naive OCR Fails & The Black Hole Ledger Wins
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/90 hover:border-indigo-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4">
-                <Lock className="w-5 h-5" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">
-                Deterministic Semantic Nullifiers
-              </h4>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Computes <code className="text-indigo-300 font-mono text-xs">keccak256(TaxID | InvNo | Date | Amount)</code>. Cropping 2px or re-saving JPEG changes the raw file hash, but the semantic nullifier remains mathematically identical, detecting cross-donor reuse immediately.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/90 hover:border-cyan-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4">
-                <Eye className="w-5 h-5" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">
-                Dual-Tier Perceptual Hashing (pHash)
-              </h4>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                64-bit DCT fingerprint detects visual clones across rotated, compressed, or cropped receipt uploads. Hamming Distance &lt; 5 triggers immediate duplication alerts even when adversaries alter textual metadata.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/90 hover:border-pink-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400 mb-4">
-                <Flame className="w-5 h-5" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">
-                Error Level Analysis (ELA) Pixel Forensics
-              </h4>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Analyzes compression variance matrices across 8x8 DCT blocks. Photoshopped numbers (e.g. inflating ₹62,000 to ₹3,85,000) display distinct compression artifacts (score 38.7% &gt; 15.0% threshold), halting payment before release.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── INTERACTIVE MODULE LAUNCHPAD ── */}
-        <div className="mt-16 p-8 rounded-3xl bg-slate-900/50 border border-slate-800">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <h3 className="text-2xl font-black text-white">Manual Deep-Dive Explorations</h3>
-              <p className="text-sm text-slate-400">
-                Explore every dimension of the protocol through dedicated live engines.
-              </p>
-            </div>
-            <span className="text-xs font-mono font-bold text-indigo-400 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30">
-              5 INTERACTIVE APPS
-            </span>
-          </div>
-
+          {/* 4 Phase Horizontal Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/red-team"
-              className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-red-500/50 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xl">⚡</span>
-                <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-red-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            
+            <div className="border-2 border-black rounded-xl p-4 bg-white flex flex-col gap-2 shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+              <div className="flex items-center justify-between text-xs font-mono font-bold text-black/60">
+                <span>PHASE 1</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-brutal-green border border-black" />
               </div>
-              <h4 className="text-base font-bold text-white group-hover:text-red-300 transition-colors">
-                Red-Team Engine
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Stress-test receipts against 2px image crop mutations, 30% batch forgeries, and double-spends.
+              <div className="font-heading font-black text-base text-black uppercase">
+                MULTI-RAIL INFLOW
+              </div>
+              <p className="font-body text-xs text-black/80">
+                Donors deposit ETH or fiat. Contracts issue Keccak earmark hash constraints instantly.
               </p>
-            </Link>
+            </div>
 
-            <Link
-              href="/flow-tracer"
-              className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-cyan-500/50 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xl">🌐</span>
-                <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            <div className="border-2 border-black rounded-xl p-4 bg-white flex flex-col gap-2 shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+              <div className="flex items-center justify-between text-xs font-mono font-bold text-black/60">
+                <span>PHASE 2</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-brutal-green border border-black" />
               </div>
-              <h4 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Flow-Tracer DAG
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">
-                5-hop money DAG visualizer tracking bridge slippage skimming and 142 ZK-shielded rural households.
+              <div className="font-heading font-black text-base text-black uppercase">
+                INVOICE OCR + PHASH
+              </div>
+              <p className="font-body text-xs text-black/80">
+                Uploaded bills are converted to 64-bit DCT perceptual matrices and cross-referenced globally.
               </p>
-            </Link>
+            </div>
 
-            <Link
-              href="/dashboard"
-              className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xl">🏛️</span>
-                <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            <div className="border-2 border-black rounded-xl p-4 bg-white flex flex-col gap-2 shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+              <div className="flex items-center justify-between text-xs font-mono font-bold text-black/60">
+                <span>PHASE 3</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-brutal-red border border-black" />
               </div>
-              <h4 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
-                Escrow & Tranches
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Monitor the 10/15/15/10 ETH drip schedule, lock emergency freezes, and verify vendor payouts.
+              <div className="font-heading font-black text-base text-black uppercase">
+                ADVERSARIAL CLASH
+              </div>
+              <p className="font-body text-xs text-black/80">
+                Cropping receipts by 2px alters the cryptographic MD5 hash, but DCT perceptual distance remains &lt;3.
               </p>
-            </Link>
+            </div>
 
-            <Link
-              href="/donate"
-              className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-purple-500/50 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xl">💳</span>
-                <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            <div className="border-2 border-black rounded-xl p-4 bg-white flex flex-col gap-2 shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+              <div className="flex items-center justify-between text-xs font-mono font-bold text-black/60">
+                <span>PHASE 4</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-charcoal border border-black" />
               </div>
-              <h4 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors">
-                Dual-Rail Gateway
-              </h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Donate in Crypto (ETH, USDC) or Fiat (UPI, Card, SEPA) with real-time Chainlink oracle pricing.
+              <div className="font-heading font-black text-base text-black uppercase">
+                AUTONOMOUS SLASHING
+              </div>
+              <p className="font-body text-xs text-black/80">
+                Contract emits <span className="font-mono bg-primary px-1 border border-black rounded text-[11px] font-bold">EscrowFrozen()</span>.
+                Remaining ETH is returned to donors without human review.
               </p>
-            </Link>
+            </div>
+
           </div>
+
         </div>
-      </div>
+      </section>
+
+      {/* ── Bottom Operational Footer ─────────────────────── */}
+      <footer className="w-full bg-white border-t-2 border-black py-4 px-4 sm:px-6">
+        <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-4 text-xs font-mono font-bold text-black">
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            <span>CONTRACT:</span>
+            <button
+              onClick={handleCopyContract}
+              className="bg-primary border-2 border-black px-2.5 py-1 rounded shadow-brutal-sm flex items-center gap-1.5 hover:bg-primary/80 transition"
+            >
+              <span>0x71C3a89...4489B</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-brutal-green" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+            <div className="bg-white border-2 border-black px-2.5 py-1 rounded shadow-brutal-sm flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-brutal-green" />
+              <span>ZERO PII SHIELD ACTIVE</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-black/70">
+            <span className="flex items-center gap-1.5 text-black">
+              <span className="w-2 h-2 rounded-full bg-brutal-green border border-black" />
+              <span>SYSTEM 100% OPERATIONAL</span>
+            </span>
+            <span>© 2026 THE BLACK HOLE LEDGER</span>
+          </div>
+
+        </div>
+      </footer>
+
     </div>
   );
 }
